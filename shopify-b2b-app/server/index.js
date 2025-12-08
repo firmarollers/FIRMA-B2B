@@ -113,9 +113,17 @@ app.get('/', (req, res) => {
 });
 
 // Admin dashboard (simplified - in production you'd serve React app here)
+// Admin dashboard (simplified - in production you'd serve React app here)
 app.get('/admin', (req, res) => {
-  if (!req.session.shop) {
-    return res.redirect('/auth/shopify');
+  const shop = req.session.shop || req.query.shop;
+  
+  if (!shop) {
+    return res.status(400).send('Missing shop parameter. Please add ?shop=your-shop.myshopify.com');
+  }
+  
+  // Save shop to session if not already saved
+  if (!req.session.shop && req.query.shop) {
+    req.session.shop = req.query.shop;
   }
   
   res.send(`
@@ -149,7 +157,7 @@ app.get('/admin', (req, res) => {
       </head>
       <body>
         <div class="header">
-          <h1>🛍️ B2B Wholesale Manager - ${req.session.shop}</h1>
+          <h1>🛍️ B2B Wholesale Manager - ${shop}</h1>
         </div>
         <div class="container">
           <div class="stats">
