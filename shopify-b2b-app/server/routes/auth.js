@@ -27,7 +27,7 @@ router.get('/shopify', (req, res) => {
   const redirectUri = `https://${HOST}/auth/callback`;
   const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&state=${state}&redirect_uri=${redirectUri}`;
 
-  // Store state in session
+  // Store state and shop in session
   req.session.state = state;
   req.session.shop = shop;
 
@@ -75,11 +75,19 @@ router.get('/callback', async (req, res) => {
     req.session.accessToken = access_token;
     req.session.sessionId = sessionId;
 
-    // Register webhooks
-    await registerWebhooks(shop, access_token);
+    // IMPORTANT: Save session before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).send('Session error');
+      }
 
-    // Redirect to admin dashboard
-    res.redirect('/admin');
+      // Register webhooks
+      registerWebhooks(shop, access_token).catch(console.error);
+
+      // Redirect to admin dashboard with shop parameter
+      res.redirect(`/admin?shop=${shop}`);
+    });
 
   } catch (error) {
     console.error('OAuth error:', error.response?.data || error.message);
@@ -134,9 +142,18 @@ router.get('/logout', (req, res) => {
 
 // Middleware to verify authentication
 function verifyAuth(req, res, next) {
-  if (!req.session.shop || !req.session.accessToken) {
+  const shop = req.session.shop || req.query.shop;
+  
+  if (!shop || !req.session.accessToken) {
+    // Redirect to install if not authenticated
+    if (shop) {
+      return res.redirect(`/auth/shopify?shop=${shop}`);
+    }
     return res.status(401).json({ error: 'Not authenticated' });
   }
+  
+  // Add shop to request for convenience
+  req.shop = shop;
   next();
 }
 
