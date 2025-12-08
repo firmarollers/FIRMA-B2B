@@ -1,0 +1,372 @@
+# Shopify B2B App - Complete Installation Guide
+
+## ⚡ Quick Summary
+
+**What you'll do:**
+1. Create a Shopify app (5 min)
+2. Upload files to GitHub (5 min)
+3. Deploy to Render.com FREE (10 min)
+4. Install on your Shopify store (2 min)
+5. Add registration page to your store (3 min)
+
+**Total time: ~25 minutes**
+
+**No coding knowledge required** - just follow the steps and copy-paste!
+
+---
+
+## Overview
+This B2B app integrates seamlessly with your Shopify store (Ritual theme) and provides:
+- ✅ Custom pricing per customer/group
+- ✅ Exclusive catalogs for wholesale customers
+- ✅ Minimum and maximum order quantities
+- ✅ Quote requests
+- ✅ Order approval workflow
+- ✅ B2B customer management dashboard
+- ✅ Wholesale customer registration with approval
+
+## Free Hosting Options
+
+### Recommended: **Render.com** (FREE tier)
+- ✅ 750 hours/month free
+- ✅ Supports Node.js + SQLite
+- ✅ Easy deployment from GitHub
+- ✅ Automatic HTTPS
+
+### Alternative: **Railway.app** (FREE tier)
+- ✅ $5 free credit/month
+- ✅ Good for small apps
+- ✅ Easy setup
+
+### Alternative: **Fly.io** (FREE tier)
+- ✅ 3 VMs free
+- ✅ Great performance
+
+## Prerequisites
+
+1. **Shopify Partner Account**: [partners.shopify.com](https://partners.shopify.com)
+2. **GitHub Account**: [github.com](https://github.com)
+3. **Render Account**: [render.com](https://render.com)
+
+---
+
+## Step 1: Create Shopify App
+
+1. Go to [Shopify Partners Dashboard](https://partners.shopify.com)
+2. Click **Apps** → **Create App**
+3. Choose **Create app manually**
+4. Fill in:
+   - **App Name**: B2B Wholesale Manager
+   - **App URL**: `https://your-app-name.onrender.com` (we'll get this later)
+   - **Allowed redirection URL(s)**: 
+     - `https://your-app-name.onrender.com/auth/callback`
+     - `https://your-app-name.onrender.com/auth/shopify/callback`
+
+5. Click **Create App**
+6. **Save these credentials** (you'll need them):
+   - Client ID
+   - Client Secret
+
+---
+
+## Step 2: Configure App Scopes
+
+1. In your app dashboard, go to **Configuration** → **App Setup**
+2. Add these **Access Scopes**:
+   ```
+   read_products
+   write_products
+   read_customers
+   write_customers
+   read_orders
+   write_orders
+   read_price_rules
+   write_price_rules
+   read_discounts
+   write_discounts
+   ```
+
+3. Click **Save**
+
+---
+
+## Step 3: Setup GitHub Repository
+
+1. Create a new repository on GitHub
+2. Clone it locally:
+   ```bash
+   git clone https://github.com/your-username/your-repo-name.git
+   cd your-repo-name
+   ```
+
+3. Copy all the app files I'll provide into this folder
+4. Commit and push:
+   ```bash
+   git add .
+   git commit -m "Initial B2B app setup"
+   git push origin main
+   ```
+
+---
+
+## Step 4: Deploy to Render.com
+
+1. Go to [render.com](https://render.com) and sign in
+2. Click **New +** → **Web Service**
+3. Connect your GitHub repository
+4. Configure:
+   - **Name**: `shopify-b2b-app`
+   - **Environment**: `Node`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+   - **Plan**: `Free`
+
+5. Add **Environment Variables**:
+   ```
+   SHOPIFY_API_KEY=your_client_id_here
+   SHOPIFY_API_SECRET=your_client_secret_here
+   SCOPES=read_products,write_products,read_customers,write_customers,read_orders,write_orders,read_price_rules,write_price_rules,read_discounts,write_discounts
+   HOST=your-app-name.onrender.com
+   NODE_ENV=production
+   SESSION_SECRET=generate_random_string_here
+   ```
+
+6. Click **Create Web Service**
+
+7. **Copy your Render URL** (e.g., `https://shopify-b2b-app.onrender.com`)
+
+---
+
+## Step 5: Update Shopify App URLs
+
+1. Go back to your Shopify Partner Dashboard
+2. Navigate to your app → **Configuration**
+3. Update:
+   - **App URL**: `https://your-app-name.onrender.com`
+   - **Allowed redirection URLs**: 
+     - `https://your-app-name.onrender.com/auth/callback`
+     - `https://your-app-name.onrender.com/auth/shopify/callback`
+
+4. Click **Save**
+
+---
+
+## Step 6: Install App on Your Store
+
+1. In Shopify Partners, go to your app
+2. Click **Test on development store** or **Select store**
+3. Choose your store with Ritual theme
+4. Click **Install**
+5. Approve the permissions
+
+---
+
+## Step 7: Configure Theme Integration
+
+### Option A: App Embed (Recommended)
+1. In Shopify Admin: **Online Store** → **Themes**
+2. Click **Customize** on Ritual theme
+3. In theme editor: **App embeds** (left sidebar)
+4. Enable **B2B Wholesale Manager**
+5. Click **Save**
+
+### Option B: Manual Theme Integration
+Add this to your `theme.liquid` before `</body>`:
+
+```liquid
+{% if customer.tags contains 'b2b' or customer.tags contains 'wholesale' %}
+  <script src="https://your-app-name.onrender.com/storefront/b2b-integration.js"></script>
+  <link rel="stylesheet" href="https://your-app-name.onrender.com/storefront/b2b-styles.css">
+{% endif %}
+```
+
+---
+
+## Step 8: Initial Configuration
+
+1. Access your app: **Shopify Admin** → **Apps** → **B2B Wholesale Manager**
+
+2. **Create Customer Groups**:
+   - Go to **Customer Groups** tab
+   - Click **Create Group**
+   - Examples:
+     - **VIP Wholesale**: 30% discount
+     - **Standard Wholesale**: 20% discount
+     - **Retailers**: 15% discount
+
+3. **Set Catalog Restrictions** (optional):
+   - Go to **Catalogs** tab
+   - Create exclusive collections for B2B
+   - Assign to customer groups
+
+4. **Configure Minimum Orders**:
+   - Go to **Settings** tab
+   - Set minimum order amounts per group
+   - Set minimum quantities per product (optional)
+
+---
+
+## Step 9: Test B2B Registration Flow
+
+1. **Create test registration page**:
+   - Go to **Online Store** → **Pages**
+   - Create new page: "Wholesale Registration"
+   - Add this code:
+   ```html
+   <div id="b2b-registration-form"></div>
+   <script src="https://your-app-name.onrender.com/storefront/registration-form.js"></script>
+   ```
+
+2. **Test the flow**:
+   - Visit the wholesale registration page (not logged in)
+   - Fill out the B2B registration form
+   - Submit application
+   - Check app dashboard for pending approval
+
+3. **Approve a customer**:
+   - In app: **B2B Customers** → **Pending**
+   - Review application
+   - Click **Approve**
+   - Customer receives email notification
+
+4. **Test B2B pricing**:
+   - Log in as approved B2B customer
+   - Browse products
+   - Verify custom pricing is displayed
+   - Test minimum order requirements
+
+---
+
+## File Structure
+
+```
+shopify-b2b-app/
+├── server/
+│   ├── index.js              # Main server file
+│   ├── routes/
+│   │   ├── auth.js           # Shopify OAuth
+│   │   ├── api.js            # API endpoints
+│   │   ├── customers.js      # B2B customer management
+│   │   ├── pricing.js        # Pricing rules
+│   │   ├── orders.js         # Order approval
+│   │   └── quotes.js         # Quote requests
+│   ├── middleware/
+│   │   ├── auth.js           # Authentication
+│   │   └── shopify.js        # Shopify API helpers
+│   └── database/
+│       ├── db.js             # SQLite setup
+│       └── models.js         # Data models
+├── client/
+│   ├── pages/
+│   │   ├── Dashboard.jsx     # Admin dashboard
+│   │   ├── Customers.jsx     # Customer management
+│   │   ├── Pricing.jsx       # Pricing rules
+│   │   ├── Orders.jsx        # Order approval
+│   │   └── Settings.jsx      # App settings
+│   ├── components/
+│   │   ├── CustomerForm.jsx  # B2B registration
+│   │   ├── PricingTable.jsx  # Pricing display
+│   │   └── OrderList.jsx     # Order management
+│   └── App.jsx               # Main React app
+├── storefront/
+│   ├── b2b-integration.js    # Frontend integration
+│   ├── registration-form.js  # Registration widget
+│   └── b2b-styles.css        # Ritual theme compatible styles
+├── package.json
+└── README.md
+```
+
+---
+
+## Key Features Explained
+
+### 1. Custom Pricing
+- **Percentage discount**: Apply % off retail price
+- **Fixed pricing**: Set specific wholesale prices
+- **Tiered pricing**: Different prices for different quantities
+
+### 2. Customer Groups
+- Organize customers by wholesale tier
+- Apply group-wide pricing rules
+- Restrict catalog access by group
+
+### 3. Order Approval
+- Review orders before fulfillment
+- Approve/reject with notes
+- Email notifications
+
+### 4. Quote Requests
+- Customers can request custom quotes
+- Admin reviews and provides pricing
+- Convert quotes to orders
+
+### 5. Minimum/Maximum Orders
+- Set minimum order values
+- Set minimum quantities per product
+- Prevent checkout if requirements not met
+
+---
+
+## Troubleshooting
+
+### App not loading
+- Check Render logs for errors
+- Verify environment variables are set correctly
+- Ensure Shopify app URLs match Render URL
+
+### Pricing not showing
+- Verify customer has B2B tag
+- Check customer group assignment
+- Clear browser cache
+
+### Theme integration issues
+- Ensure app embed is enabled
+- Check theme.liquid modifications
+- Verify JavaScript is loading (check browser console)
+
+### Database errors
+- Render free tier may sleep after inactivity
+- First request after sleep takes ~30 seconds
+- Consider upgrading to paid tier for production
+
+---
+
+## Next Steps
+
+1. **Customize emails**: Edit email templates in app settings
+2. **Add custom fields**: Modify registration form in `CustomerForm.jsx`
+3. **Integrate accounting**: Connect to QuickBooks/Xero (requires additional setup)
+4. **Add reporting**: Build custom reports in dashboard
+
+---
+
+## Support
+
+- **Documentation**: Check inline code comments
+- **Shopify API Docs**: [shopify.dev](https://shopify.dev)
+- **Render Docs**: [render.com/docs](https://render.com/docs)
+
+---
+
+## Important Notes
+
+⚠️ **Free Tier Limitations**:
+- Render free tier sleeps after 15 min inactivity
+- First request after sleep: ~30 seconds to wake
+- For production, consider paid tier ($7/month)
+
+⚠️ **Security**:
+- Never commit `.env` file to GitHub
+- Rotate SESSION_SECRET regularly
+- Use strong API credentials
+
+⚠️ **Ritual Theme Compatibility**:
+- All styles use Ritual's CSS variables
+- Custom JS respects theme structure
+- No conflicts with existing features
+
+---
+
+## Ready to Start?
+
+I'll now create all the necessary files for you in the next artifacts!

@@ -1,0 +1,297 @@
+/* B2B Wholesale Styles - Compatible with Ritual Theme */
+
+/* B2B Customer Badge */
+.b2b-customer-badge {
+  animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* B2B Price Display */
+.b2b-price-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.b2b-original-price {
+  text-decoration: line-through;
+  color: var(--color-text-subdued, #999);
+  font-size: 0.9em;
+}
+
+.b2b-final-price {
+  color: var(--color-price, #d32f2f);
+  font-weight: 600;
+  font-size: 1.1em;
+}
+
+.b2b-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(211, 47, 47, 0.3);
+}
+
+/* B2B Minimum Order Notice */
+.b2b-minimum-notice {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+  display: flex;
+  align-items: start;
+  gap: 12px;
+}
+
+.b2b-minimum-notice::before {
+  content: "⚠️";
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.b2b-minimum-notice-content {
+  flex: 1;
+}
+
+.b2b-minimum-notice strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #856404;
+  font-size: 15px;
+}
+
+.b2b-minimum-notice p {
+  margin: 0;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Cart Validation Messages */
+.b2b-cart-message {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.b2b-cart-message.success {
+  border-left: 4px solid #4caf50;
+}
+
+.b2b-cart-message.warning {
+  border-left: 4px solid #ff9800;
+}
+
+.b2b-cart-message.error {
+  border-left: 4px solid #f44336;
+}
+
+.b2b-cart-message-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.b2b-cart-message-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.b2b-cart-message-list li {
+  margin-bottom: 6px;
+}
+
+/* B2B Product Labels */
+.b2b-wholesale-label {
+  display: inline-block;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+/* Quote Request Button */
+.b2b-quote-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.b2b-quote-button:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.b2b-quote-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Customer Info Panel */
+.b2b-customer-info {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.b2b-customer-info-title {
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.b2b-customer-info-details {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+.b2b-customer-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.b2b-customer-info-label {
+  opacity: 0.85;
+}
+
+.b2b-customer-info-value {
+  font-weight: 600;
+}
+
+/* Loading States */
+.b2b-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(102, 126, 234, 0.3);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: b2b-spin 0.8s linear infinite;
+}
+
+@keyframes b2b-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .b2b-customer-badge > div {
+    top: 80px !important;
+    right: 10px !important;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+  }
+
+  .b2b-price-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .b2b-discount-badge {
+    font-size: 0.7em;
+    padding: 3px 8px;
+  }
+
+  .b2b-customer-info {
+    padding: 16px;
+  }
+
+  .b2b-customer-info-title {
+    font-size: 16px;
+  }
+
+  .b2b-customer-info-details {
+    font-size: 13px;
+  }
+}
+
+/* Integration with Ritual Theme Specifics */
+.product__price .b2b-price-wrapper,
+.price__container .b2b-price-wrapper {
+  display: flex;
+  align-items: baseline;
+}
+
+.cart__item .b2b-price-wrapper {
+  justify-content: flex-end;
+}
+
+/* Ensure compatibility with theme's price selectors */
+.price--on-sale .b2b-original-price,
+.price__sale .b2b-original-price {
+  color: var(--color-text-subdued, #999);
+}
+
+.price__regular .b2b-final-price {
+  color: var(--color-price, #d32f2f);
+}
+
+/* Dark mode support (if Ritual theme has dark mode) */
+@media (prefers-color-scheme: dark) {
+  .b2b-cart-message {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .b2b-minimum-notice {
+    background: rgba(255, 243, 205, 0.1);
+    border-color: rgba(255, 193, 7, 0.5);
+  }
+
+  .b2b-minimum-notice strong,
+  .b2b-minimum-notice p {
+    color: rgba(255, 243, 205, 0.9);
+  }
+}
