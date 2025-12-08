@@ -4,6 +4,7 @@ services:
     env: node
     region: oregon
     plan: free
+    # rootDir: .   <- SI EXISTE ESTA LÍNEA, BÓRRALA
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
