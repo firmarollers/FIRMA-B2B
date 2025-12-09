@@ -4,13 +4,12 @@ const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-// *** CORRECCIÓN DE RUTA: './database/db' si db.js está dentro de server/database/ ***
 const { initDatabase } = require('./database/db'); 
 
 const router = express.Router();
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 
-// Import routes
+// Import routes y el middleware de autenticación
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
 const customerRoutes = require('./routes/customers');
@@ -18,6 +17,8 @@ const pricingRoutes = require('./routes/pricing');
 const orderRoutes = require('./routes/orders');
 const quoteRoutes = require('./routes/quotes');
 const storefrontRoutes = require('./routes/storefront');
+// Importa verifyAuth desde auth.js
+const { verifyAuth } = require('./routes/auth'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,10 +26,9 @@ const PORT = process.env.PORT || 3000;
 // Initialize database
 initDatabase();
 
-// === CORRECCIÓN CRUCIAL 1: Confiar en el proxy para HTTPS (Render) ===
-// Necesario para que las cookies (sesiones) funcionen correctamente
+// === CONFIGURACIÓN DE PROXY/HTTPS ===
 app.set('trust proxy', 1); 
-// ====================================================================
+// ===================================
 
 // Middleware
 app.use(cors({
@@ -43,23 +43,29 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    // CORRECCIÓN CRUCIAL 2: secure: true para HTTPS (Render)
+    // 1. OBLIGATORIO: Cookies seguras en Render
     secure: process.env.NODE_ENV === 'production', 
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    // 2. CORRECCIÓN DEFINITIVA: Permite el envío en el IFRAME de Shopify
+    sameSite: 'none'
   }
 }));
 
 // Serve static files (for storefront integration)
 app.use('/storefront', express.static(path.join(__dirname, '../storefront')));
 
+// === MIDDLEWARE PREVENTIVO ===
+// Aplica verifyAuth a TODAS las rutas de API
+app.use('/api', verifyAuth, apiRoutes);
+app.use('/api/customers', verifyAuth, customerRoutes);
+app.use('/api/pricing', verifyAuth, pricingRoutes);
+app.use('/api/orders', verifyAuth, orderRoutes);
+app.use('/api/quotes', verifyAuth, quoteRoutes);
+// =============================
+
 // Routes
 app.use('/auth', authRoutes);
-app.use('/api', apiRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/pricing', pricingRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/quotes', quoteRoutes);
 app.use('/storefront-api', storefrontRoutes);
 
 // Health check endpoint
@@ -149,20 +155,25 @@ app.get('/', (req, res) => {
 
 // Admin dashboard: App Incrustada
 app.get('/admin', (req, res) => {
-  // Toma 'shop' de la sesión o del query
-  const shop = req.session.shop || req.query.shop;
-  
-  if (!shop) {
-    // Si no hay shop, redirige a la raíz para que el usuario ingrese la tienda.
-    return res.redirect('/'); 
-  }
-  
-  // Guarda shop a la sesión si no está
-  if (!req.session.shop && req.query.shop) {
-    req.session.shop = req.query.shop;
-  }
-  
-  res.send(`
+  // Ejecuta la verificación de autenticación antes de cargar el dashboard
+  verifyAuth(req, res, () => {
+    // Si la autenticación es exitosa, la ejecución continúa aquí.
+    
+    // Toma 'shop' de la sesión o del query
+    const shop = req.session.shop || req.query.shop;
+    const SHOPIFY_API_KEY_LOCAL = process.env.SHOPIFY_API_KEY; // Usar una variable local
+    
+    // Esto es redundante si verifyAuth funciona, pero lo mantenemos para seguridad
+    if (!shop) {
+      return res.redirect('/'); 
+    }
+    
+    // Guarda shop a la sesión si no está
+    if (!req.session.shop && req.query.shop) {
+      req.session.shop = req.query.shop;
+    }
+    
+    res.send(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -197,7 +208,7 @@ app.get('/admin', (req, res) => {
         <div class="admin-wrapper">
           <div class="header">
             <h1>🛍️ B2B Wholesale Manager - ${shop}</h1>
-            <p>Tu API Key (para verificar): ${SHOPIFY_API_KEY}</p> 
+            <p>Tu API Key (para verificar): ${SHOPIFY_API_KEY_LOCAL}</p> 
           </div>
           <div class="container">
             <div class="stats">
@@ -254,7 +265,7 @@ app.get('/admin', (req, res) => {
         <script>
             // Inicializar Shopify App Bridge
             const app = window.app = ShopifyAppBridge.createApp({
-                apiKey: '${SHOPIFY_API_KEY}',
+                apiKey: '${SHOPIFY_API_KEY_LOCAL}',
                 host: new URL(window.location).searchParams.get("host"), // Obtiene el host de Shopify Admin
             });
             
@@ -264,6 +275,7 @@ app.get('/admin', (req, res) => {
             // Asegurarse de que el dashboard solo se cargue si la tienda está en la sesión
             if (!'${shop}') return; 
             try {
+              // Aquí las llamadas al API deberían funcionar gracias a verifyAuth
               const [customers, groups, stats] = await Promise.all([
                 fetch(API_BASE + '/customers').then(r => r.json()),
                 fetch(API_BASE + '/groups').then(r => r.json()),
@@ -330,7 +342,9 @@ app.get('/admin', (req, res) => {
       </body>
     </html>
   `);
+  }); // Cierre del verifyAuth
 });
+
 
 // Error handling
 app.use((err, req, res, next) => {
