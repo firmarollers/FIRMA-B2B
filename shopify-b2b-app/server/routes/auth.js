@@ -8,7 +8,7 @@ const router = express.Router();
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const SCOPES = process.env.SCOPES || 'read_products,write_products,read_customers,write_customers,read_orders,write_orders';
-const HOST = process.env.HOST || 'localhost:3000'; // Asegúrate que HOST en Render sea 'firma-b2b.onrender.com'
+const HOST = process.env.HOST || 'localhost:3000'; 
 
 // 1. Ruta de inicio de la autenticación (Inicia el flujo OAuth)
 router.get('/shopify', (req, res) => {
@@ -81,38 +81,9 @@ router.get('/callback', async (req, res) => {
 
       registerWebhooks(shop, access_token).catch(console.error);
       
-      // =================================================================
-      // !!! CORRECCIÓN CRUCIAL PARA LA REDIRECCIÓN DE APPS EMBEBIDAS !!!
-      // Usamos JavaScript para navegar la ventana superior y evitar el error de frame
-      // =================================================================
-      
-      // La URL a la que se debe redirigir dentro del Admin de Shopify es:
-      // https://{shop}/admin/apps/{SHOPIFY_API_KEY}
-      const embeddedRedirectUrl = `https://${shop}/admin/apps/${SHOPIFY_API_KEY}`;
-
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <script type="text/javascript">
-              var redirectUrl = '${embeddedRedirectUrl}';
-              
-              // Si estamos dentro de un iframe (como es el caso después del OAuth), 
-              // debemos forzar la navegación de la ventana padre (Shopify Admin)
-              if (window.top === window.self) {
-                window.location.assign(redirectUrl);
-              } else {
-                window.top.location.assign(redirectUrl);
-              }
-            </script>
-            <title>Redirigiendo a Shopify...</title>
-          </head>
-          <body>
-            Redirigiendo a Shopify Admin para cargar la aplicación...
-          </body>
-        </html>
-      `);
-
+      // Redirección final para aplicaciones incrustadas.
+      // Apunta a la URL donde Shopify espera que se cargue el iframe.
+      res.redirect(`https://${shop}/admin/apps/${SHOPIFY_API_KEY}`);
     });
 
   } catch (error) {
@@ -121,7 +92,7 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-// Función para registrar webhooks (no tocada)
+// Función para registrar webhooks
 async function registerWebhooks(shop, accessToken) {
   const webhooks = [
     { topic: 'orders/create', address: `https://${HOST}/webhooks/orders/create` },
@@ -142,7 +113,7 @@ async function registerWebhooks(shop, accessToken) {
   }
 }
 
-// Otras rutas (no tocadas)
+// Otras rutas
 router.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/');
