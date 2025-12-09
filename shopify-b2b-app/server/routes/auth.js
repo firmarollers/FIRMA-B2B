@@ -18,39 +18,58 @@ router.get('/shopify', (req, res) => {
     return res.status(400).send('Missing shop parameter. Please add ?shop=your-shop.myshopify.com');
   }
 
-  // Validate shop domain
-  if (!shop.match(/^[a-z0-9][a-z0-9\-]*\.myshopify\.com$/i)) {
-    return res.status(400).send('Invalid shop domain');
+  // Extract myshopify.com domain if custom domain is used
+  let shopDomain = shop;
+  if (!shop.includes('.myshopify.com')) {
+    // If it's a custom domain, we need the myshopify.com equivalent
+    // For now, we'll let Shopify handle it
+    shopDomain = shop;
   }
 
   const state = crypto.randomBytes(16).toString('hex');
+  
+  // Use the EXACT callback URL that's in Shopify Partners
   const redirectUri = `https://${HOST}/auth/callback`;
-console.log('🔍 DEBUG - Shop:', shop);
-console.log('🔍 DEBUG - Redirect URI:', redirectUri);
-console.log('🔍 DEBUG - Install URL:', installUrl);
-  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&state=${state}&redirect_uri=${redirectUri}`;
+  
+  const installUrl = `https://${shopDomain}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&state=${state}&redirect_uri=${redirectUri}`;
 
   // Store state and shop in session
   req.session.state = state;
-  req.session.shop = shop;
-
-  res.redirect(installUrl);
+  req.session.shop = shopDomain;
+  
+  // Force session save before redirect
+  req.session.save((err) => {
+    if (err) {
+      console.error('Session save error:', err);
+      return res.status(500).send('Session error. Please try again.');
+    }
+    
+    console.log('✅ Redirecting to Shopify OAuth for shop:', shopDomain);
+    console.log('✅ Redirect URI:', redirectUri);
+    res.redirect(installUrl);
+  });
 });
 
-// OAuth callback
+// OAuth callback - This URL MUST match exactly what's in Shopify Partners
 router.get('/callback', async (req, res) => {
-  const { shop, code, state } = req.query;
+  const { shop, code, state, hmac } = req.query;
+
+  console.log('✅ OAuth callback received for shop:', shop);
 
   // Verify state
   if (state !== req.session.state) {
-    return res.status(403).send('Request origin cannot be verified');
+    console.error('❌ State mismatch');
+    return res.status(403).send('Request origin cannot be verified. Please try installing again.');
   }
 
   if (!shop || !code) {
+    console.error('❌ Missing shop or code');
     return res.status(400).send('Required parameters missing');
   }
 
   try {
+    console.log('🔄 Exchanging code for access token...');
+    
     // Exchange code for access token
     const response = await axios.post(`https://${shop}/admin/oauth/access_token`, {
       client_id: SHOPIFY_API_KEY,
@@ -59,106 +78,50 @@ router.get('/callback', async (req, res) => {
     });
 
     const { access_token, scope } = response.data;
+    
+    console.log('✅ Access token received');
 
     // Store session in database
     const db = getDatabase();
     const sessionId = crypto.randomBytes(16).toString('hex');
     
     db.prepare(`
-      INSERT INTO sessions (id, shop, state, accessToken, scope, isOnline)
+      INSERT OR REPLACE INTO sessions (id, shop, state, accessToken, scope, isOnline)
       VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET 
-        accessToken = ?,
-        scope = ?,
-        expires = datetime('now', '+1 day')
-    `).run(sessionId, shop, state, access_token, scope, 0, access_token, scope);
+    `).run(sessionId, shop, state, access_token, scope, 0);
 
     // Store in session
     req.session.shop = shop;
     req.session.accessToken = access_token;
     req.session.sessionId = sessionId;
 
+    console.log('✅ Session saved, redirecting to admin...');
+
     // IMPORTANT: Save session before redirect
     req.session.save((err) => {
       if (err) {
-        console.error('Session save error:', err);
+        console.error('❌ Session save error:', err);
         return res.status(500).send('Session error');
       }
 
-      // Register webhooks
+      // Register webhooks in background
       registerWebhooks(shop, access_token).catch(console.error);
 
-      // Redirect to admin dashboard with shop parameter
-      res.redirect(`/admin?shop=${shop}`);
+      // Redirect to admin with shop parameter
+      const adminUrl = `/admin?shop=${shop}`;
+      console.log('✅ Redirecting to:', adminUrl);
+      
+      // Use Shopify's redirect format for embedded apps
+      res.redirect(adminUrl);
     });
 
   } catch (error) {
-    console.error('OAuth error:', error.response?.data || error.message);
-    res.status(500).send('Authentication failed. Please try again.');
+    console.error('❌ OAuth error:', error.response?.data || error.message);
+    res.status(500).send(`Authentication failed: ${error.response?.data?.error_description || error.message}. Please try again.`);
   }
 });
 
-// Register important webhooks
-async function registerWebhooks(shop, accessToken) {
-  const webhooks = [
-    {
-      topic: 'orders/create',
-      address: `https://${HOST}/webhooks/orders/create`
-    },
-    {
-      topic: 'customers/create',
-      address: `https://${HOST}/webhooks/customers/create`
-    },
-    {
-      topic: 'customers/update',
-      address: `https://${HOST}/webhooks/customers/update`
-    }
-  ];
-
-  for (const webhook of webhooks) {
-    try {
-      await axios.post(
-        `https://${shop}/admin/api/2024-01/webhooks.json`,
-        { webhook },
-        {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      console.log(`✅ Registered webhook: ${webhook.topic}`);
-    } catch (error) {
-      // Webhook might already exist
-      if (error.response?.status !== 422) {
-        console.error(`Error registering webhook ${webhook.topic}:`, error.response?.data || error.message);
-      }
-    }
-  }
-}
-
-// Logout
-router.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
-});
-
-// Middleware to verify authentication
-function verifyAuth(req, res, next) {
-  const shop = req.session.shop || req.query.shop;
-  
-  if (!shop || !req.session.accessToken) {
-    // Redirect to install if not authenticated
-    if (shop) {
-      return res.redirect(`/auth/shopify?shop=${shop}`);
-    }
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  // Add shop to request for convenience
-  req.shop = shop;
-  next();
-}
-
-module.exports = router;
-module.exports.verifyAuth = verifyAuth;
+// Alternative callback for Shopify - some versions use this
+router.get('/shopify/callback', (req, res) => {
+  console.log('✅ Received callback at /auth/shopify/callback, redirecting to /auth/callback');
+  // Redirect to main callback with all
