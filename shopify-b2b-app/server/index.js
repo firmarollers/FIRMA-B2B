@@ -6,7 +6,7 @@ const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const fs = require('fs'); // <--- CRÍTICO: Importar fs
+const fs = require('fs'); 
 // Importar el Session Store para SQLite
 const SQLiteStore = require('connect-sqlite3')(session); 
 const { initDatabase } = require('./database/db'); 
@@ -64,9 +64,10 @@ app.use(cookieParser());
 app.use(session({
   // Configuración del Store
   store: new SQLiteStore({ 
-      // Usamos la ruta absoluta a 'b2b.db'
-      db: path.join(dataDir, 'b2b.db'), 
-      table: 'sessions_store' // Nombre de la tabla de sesiones de Express
+      // CRÍTICO: Usamos la base de datos en memoria para sesiones
+      // Esto previene el error SQLITE_CANTOPEN al iniciar la sesión.
+      db: ':memory:', 
+      table: 'sessions_store' 
   }), 
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-for-production-security',
   resave: false,
@@ -327,27 +328,27 @@ app.get('/admin', (req, res) => {
               return;
             }
 
-            tbody.innerHTML = customers.map(customer => \`
+            tbody.innerHTML = customers.map(customer => `
               <tr>
-                <td><strong>\${customer.name || 'N/A'}</strong></td>
-                <td>\${customer.email}</td>
-                <td>\${customer.group_name || 'None'}</td>
-                <td><span class="badge badge-\${customer.status}">\${customer.status}</span></td>
-                <td>\${new Date(customer.created_at).toLocaleDateString()}</td>
+                <td><strong>${customer.name || 'N/A'}</strong></td>
+                <td>${customer.email}</td>
+                <td>${customer.group_name || 'None'}</td>
+                <td><span class="badge badge-${customer.status}">${customer.status}</span></td>
+                <td>${new Date(customer.created_at).toLocaleDateString()}</td>
                 <td>
-                  \${customer.status === 'pending' ? 
-                    \`<button class="nav-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="approveCustomer('\${customer.id}')">Approve</button>\` : 
-                    \`<button class="nav-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="viewCustomer('\${customer.id}')">View</button>\`
+                  ${customer.status === 'pending' ? 
+                    `<button class="nav-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="approveCustomer('${customer.id}')">Approve</button>` : 
+                    `<button class="nav-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="viewCustomer('${customer.id}')">View</button>`
                   }
                 </td>
               </tr>
-            \`).join('');
+            `).join('');
           }
 
           async function approveCustomer(id) {
             if (!confirm('Approve this B2B customer?')) return;
             try {
-              await fetch(\`\${API_BASE}/customers/\${id}/approve\`, { method: 'POST' });
+              await fetch(`${API_BASE}/customers/${id}/approve`, { method: 'POST' });
               alert('Customer approved successfully!');
               loadDashboardData();
             } catch (error) {
@@ -360,7 +361,7 @@ app.get('/admin', (req, res) => {
           }
 
           function showSection(section) {
-            alert(\`Showing \${section} section (full UI coming soon)\`);
+            alert(`Showing ${section} section (full UI coming soon)`);
           }
 
           // Load data on page load
