@@ -24,6 +24,9 @@ const { verifyAuth } = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Definición de la ruta a la carpeta 'data' (dos niveles arriba de 'server')
+const dataDir = path.join(__dirname, '..', '..', 'data'); 
+
 // Initialize database
 initDatabase();
 
@@ -42,10 +45,10 @@ app.use(cookieParser());
 
 // === BLOQUE CRÍTICO CORREGIDO: Sesiones persistentes en SQLite y SameSite ===
 app.use(session({
-  // Configuración del Store para usar la nueva tabla sessions_store
+  // Configuración del Store para usar la ruta absoluta y la tabla corregida
   store: new SQLiteStore({ 
-      db: 'app.sqlite', // Nombre del archivo de base de datos
-      dir: path.join(__dirname, 'database'), // Directorio de la DB
+      // CRÍTICO: Usamos la ruta completa a 'b2b.db'
+      db: path.join(dataDir, 'b2b.db'), 
       table: 'sessions_store' // Nombre de la tabla de sesiones de Express
   }), 
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-for-production-security',
