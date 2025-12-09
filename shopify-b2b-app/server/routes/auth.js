@@ -1,7 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
 const axios = require('axios');
-// La ruta de db es correcta desde routes/, que está dentro de server/
 const { getDatabase } = require('../database/db'); 
 
 const router = express.Router();
@@ -9,7 +8,8 @@ const router = express.Router();
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const SCOPES = process.env.SCOPES || 'read_products,write_products,read_customers,write_customers,read_orders,write_orders';
-const HOST = process.env.HOST || 'localhost:3000'; 
+// === CORRECCIÓN HOST ===
+const HOST = process.env.HOST || 'firma-b2b.onrender.com'; 
 
 // 1. Ruta de inicio de la autenticación (Inicia el flujo OAuth)
 router.get('/shopify', (req, res) => {
@@ -42,7 +42,7 @@ router.get('/callback', async (req, res) => {
   
   console.log('OAuth callback for shop:', shop);
 
-  // === VERIFICACIÓN DE STATE (Ahora debería funcionar gracias a index.js) ===
+  // === VERIFICACIÓN DE STATE ===
   if (state !== req.session.state) {
     return res.status(403).send('Request origin cannot be verified'); 
   }
@@ -65,7 +65,6 @@ router.get('/callback', async (req, res) => {
     const db = getDatabase();
     const sessionId = crypto.randomBytes(16).toString('hex');
     
-    // *** CORRECCIÓN CRUCIAL: Limpieza de caracteres extraños en la consulta SQL ***
     db.prepare(`
       INSERT OR REPLACE INTO sessions (id, shop, state, accessToken, scope, isOnline)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -121,13 +120,24 @@ router.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
+// === MIDDLEWARE DE AUTENTICACIÓN MEJORADO ===
 function verifyAuth(req, res, next) {
   const shop = req.session.shop || req.query.shop;
-  if (!shop || !req.session.accessToken) {
+  const accessToken = req.session.accessToken;
+  
+  if (!shop || !accessToken) {
+    // Si falta la sesión (ej: Request origin cannot be verified)
+    if (req.url.startsWith('/api')) {
+      return res.status(401).json({ error: 'Authentication required for API' });
+    }
+    // Para rutas web (como /admin), redirige al inicio de la instalación
     if (shop) return res.redirect(`/auth/shopify?shop=${shop}`);
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.redirect('/');
   }
+  
+  // Adjunta shop y token a la solicitud para que las rutas posteriores puedan usarlos
   req.shop = shop;
+  req.accessToken = accessToken;
   next();
 }
 
