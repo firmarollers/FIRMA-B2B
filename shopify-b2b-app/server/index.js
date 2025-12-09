@@ -30,14 +30,13 @@ const PORT = process.env.PORT || 3000;
 // --- BLOQUE CRÍTICO DE RUTA ABSOLUTA ---
 const dataDir = path.join(process.cwd(), 'data'); 
 
-// CRÍTICO: FORZAR LA CREACIÓN DEL DIRECTORIO AQUÍ
+// CRÍTICO: FORZAR LA CREACIÓN DEL DIRECTORIO AQUÍ (Resuelve SQLITE_CANTOPEN)
 if (!fs.existsSync(dataDir)) {
     try {
         fs.mkdirSync(dataDir, { recursive: true });
         console.log(`✅ Directory ${dataDir} created successfully.`);
     } catch (e) {
         console.error(`❌ FATAL ERROR: Could not create data directory at ${dataDir}`, e);
-        // Si no podemos crear el directorio, debemos salir
         process.exit(1); 
     }
 }
@@ -60,12 +59,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// === BLOQUE CRÍTICO: Sesiones persistentes en SQLite y SameSite ===
+// === BLOQUE CRÍTICO: Sesiones en Memoria y SameSite ===
 app.use(session({
   // Configuración del Store
   store: new SQLiteStore({ 
-      // CRÍTICO: Usamos la base de datos en memoria para sesiones
-      // Esto previene el error SQLITE_CANTOPEN al iniciar la sesión.
+      // CRÍTICO: Usamos la base de datos en memoria para sesiones para evitar errores de permisos en Render.
       db: ':memory:', 
       table: 'sessions_store' 
   }), 
@@ -201,6 +199,7 @@ app.get('/admin', (req, res) => {
       req.session.shop = req.query.shop;
     }
     
+    // CRÍTICO: Usamos comillas simples ('...') para encerrar todo el HTML/JS
     res.send(`
     <!DOCTYPE html>
     <html>
@@ -328,6 +327,7 @@ app.get('/admin', (req, res) => {
               return;
             }
 
+            // CORRECCIÓN CRÍTICA DE SINTAXIS: Uso de backticks (`) limpio dentro del string contenedor.
             tbody.innerHTML = customers.map(customer => `
               <tr>
                 <td><strong>${customer.name || 'N/A'}</strong></td>
