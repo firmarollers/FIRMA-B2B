@@ -2,15 +2,16 @@
 
 const express = require('express');
 const crypto = require('crypto');
-const axios = require('axios'); // Asegurado que está instalado (axios: ^1.6.2)
-const { getDatabase } = require('../database/db'); // Se asume que db.js provee una instancia síncrona/semi-síncrona de SQLite
+const axios = require('axios'); 
+// No se necesita getDatabase() temporalmente
+// const { getDatabase } = require('../database/db'); 
 
 const router = express.Router();
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const SCOPES = process.env.SCOPES || 'read_products,write_products,read_customers,write_customers,read_orders,write_orders,read_price_rules,write_price_rules,read_discounts,write_discounts';
-const HOST = process.env.HOST || 'firma-b2b.onrender.com'; // CRÍTICO: Asegura que HOST esté configurado en Render
+const HOST = process.env.HOST || 'firma-b2b.onrender.com';
 
 // Middleware para verificar autenticación (definido aquí, exportado al final)
 function verifyAuth(req, res, next) {
@@ -68,7 +69,7 @@ router.get('/callback', async function(req, res) {
   var shop = req.query.shop;
   var code = req.query.code;
   var state = req.query.state;
-  var host = req.query.host; // <--- CRÍTICO: CAPTURAMOS EL HOST
+  var host = req.query.host; // CRÍTICO: CAPTURAMOS EL HOST
 
   console.log('OAuth callback for shop:', shop);
 
@@ -101,17 +102,21 @@ router.get('/callback', async function(req, res) {
     
     console.log('Access token received');
 
-    // 2. Guardar en la Base de Datos (con manejo de error)
+    // --- GESTIÓN DE LA BASE DE DATOS (COMENTADA PARA DIAGNÓSTICO DEL 502) ---
     var sessionId = crypto.randomBytes(16).toString('hex');
+    /*
     try {
+      const { getDatabase } = require('../database/db'); 
       var db = getDatabase();
+      // Esta línea es la principal sospechosa del crash síncrono.
       db.prepare('INSERT OR REPLACE INTO sessions (id, shop, state, accessToken, scope, isOnline) VALUES (?, ?, ?, ?, ?, ?)').run(sessionId, shop, state, accessToken, scope, 0);
     } catch (dbError) {
-      console.warn('WARNING: Failed to save session to SQLite. Continuing with Express Session.', dbError);
-      // La aplicación continuará usando solo la sesión de Express
+      console.warn('WARNING: Failed to save shop/session to SQLite. Continuing with Express Session.', dbError);
     }
+    */
+    // -------------------------------------------------------------------------
 
-    // 3. Actualizar la Sesión de Express
+    // 3. Actualizar la Sesión de Express (CRÍTICO para la autenticación)
     req.session.shop = shop;
     req.session.accessToken = accessToken;
     req.session.sessionId = sessionId;
@@ -123,11 +128,11 @@ router.get('/callback', async function(req, res) {
       }
 
       console.log('Session saved, registering webhooks...');
-      // El registro de webhooks es asíncrono y no bloquea
+      // Se mantiene el registro de webhooks ya que no bloquea la redirección.
       registerWebhooks(shop, accessToken).catch(console.error);
       
       console.log('Redirecting to admin dashboard with host parameter');
-      // CORRECCIÓN FINAL: Incluir el parámetro 'host' para App Bridge
+      // CRÍTICO: Incluir el parámetro 'host' para App Bridge
       res.redirect('/admin?shop=' + shop + '&host=' + host);
     });
 
@@ -146,7 +151,6 @@ async function registerWebhooks(shop, accessToken) {
 
   for (var i = 0; i < webhooks.length; i++) {
     var webhook = webhooks[i];
-    // Usamos la versión de API 2024-01, que parece ser la que tienes configurada
     var shopifyApiVersion = '2024-01'; 
     try {
       await axios.post('https://' + shop + '/admin/api/' + shopifyApiVersion + '/webhooks.json', { webhook: webhook }, {
@@ -157,7 +161,7 @@ async function registerWebhooks(shop, accessToken) {
       });
       console.log('Registered webhook:', webhook.topic);
     } catch (error) {
-      if (error.response && error.response.status !== 422) { // 422 significa que ya existe
+      if (error.response && error.response.status !== 422) {
         console.error('Webhook registration error:', webhook.topic, error.response ? error.response.data : error.message);
       }
     }
@@ -173,4 +177,4 @@ router.get('/logout', function(req, res) {
 
 
 module.exports = router;
-module.exports.verifyAuth = verifyAuth; // Exporta la función para usarla en index.js
+module.exports.verifyAuth = verifyAuth;
