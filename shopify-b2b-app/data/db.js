@@ -134,11 +134,11 @@ function initDatabase() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Sessions table (Shopify Access Tokens)
+    -- Sessions table (Shopify Access Tokens - CRÍTICO)
     CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      shop TEXT NOT NULL,
-      state TEXT NOT NULL,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop TEXT NOT NULL UNIQUE, -- Hacemos el shop único para que el REPLACE funcione
+      state TEXT,
       isOnline INTEGER DEFAULT 0,
       accessToken TEXT,
       scope TEXT,
@@ -146,13 +146,12 @@ function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- CRÍTICO: Nueva tabla para las sesiones de EXPRESS (usada por connect-sqlite3)
+    -- Sessions store table (para connect-sqlite3)
     CREATE TABLE IF NOT EXISTS sessions_store (
       sid TEXT PRIMARY KEY,
       sess TEXT NOT NULL,
       expire DATETIME
     );
-    -- FIN DEL BLOQUE CRÍTICO
 
     -- Create indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_customers_email ON b2b_customers(email);
@@ -205,8 +204,23 @@ function getDatabase() {
   return db;
 }
 
-// Helper functions (mantener el resto de las queries sin cambios)
+// Helper functions (queries)
 const queries = {
+  // Shop/Session Management (NUEVAS FUNCIONES CRÍTICAS)
+  saveShopSession: (shop, accessToken, scope, expires) => {
+    // Usamos INSERT OR REPLACE para simplificar y evitar errores de ID duplicada
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO sessions (shop, accessToken, scope, expires, isOnline)
+      VALUES (?, ?, ?, ?, 1)
+    `);
+    // La tabla Sessions usa el campo 'shop' como valor UNIQUE para el REPLACE/UPDATE
+    return stmt.run(shop, accessToken, scope, expires); 
+  },
+
+  getShopSession: (shop) => {
+    return db.prepare('SELECT * FROM sessions WHERE shop = ?').get(shop);
+  },
+    
   // B2B Customers
   getCustomers: () => {
     return db.prepare(`
