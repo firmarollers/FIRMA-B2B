@@ -327,7 +327,7 @@ app.get('/admin', (req, res) => {
               return;
             }
 
-            // CORRECCIÓN CRÍTICA DE SINTAXIS: Uso de backticks (`) limpio dentro del string contenedor.
+            // CORRECCIÓN CRÍTICA DE SINTAXIS: Uso de template literals (backticks) sin caracteres de escape en el comentario.
             tbody.innerHTML = customers.map(customer => `
               <tr>
                 <td><strong>${customer.name || 'N/A'}</strong></td>
