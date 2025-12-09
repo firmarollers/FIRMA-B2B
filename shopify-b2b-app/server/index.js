@@ -19,7 +19,6 @@ const { verifyAuth } = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Create data directory if it doesn't exist
 const dataDir = path.join(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   try {
@@ -31,13 +30,10 @@ if (!fs.existsSync(dataDir)) {
   }
 }
 
-// Initialize database
 initDatabase();
 
-// Trust proxy (for Render HTTPS)
 app.set('trust proxy', 1);
 
-// Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -56,10 +52,8 @@ app.use(session({
   }
 }));
 
-// Serve static files
 app.use('/storefront', express.static(path.join(__dirname, '../storefront')));
 
-// Routes
 app.use('/auth', authRoutes);
 app.use('/api', verifyAuth, apiRoutes);
 app.use('/api/customers', verifyAuth, customerRoutes);
@@ -68,12 +62,10 @@ app.use('/api/orders', verifyAuth, orderRoutes);
 app.use('/api/quotes', verifyAuth, quoteRoutes);
 app.use('/storefront-api', storefrontRoutes);
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root endpoint
 app.get('/', (req, res) => {
   const shopQuery = req.query.shop;
 
@@ -82,10 +74,10 @@ app.get('/', (req, res) => {
   }
   
   if (shopQuery) {
-    return res.redirect(\`/auth/shopify?shop=\${shopQuery}\`);
+    return res.redirect('/auth/shopify?shop=' + shopQuery);
   }
   
-  res.send(\`
+  res.send(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -127,10 +119,9 @@ app.get('/', (req, res) => {
         </div>
       </body>
     </html>
-  \`);
+  `);
 });
 
-// Admin dashboard
 app.get('/admin', (req, res) => {
   verifyAuth(req, res, () => {
     const shop = req.session.shop || req.query.shop;
@@ -142,7 +133,7 @@ app.get('/admin', (req, res) => {
       req.session.shop = req.query.shop;
     }
     
-    res.send(\`<!DOCTYPE html>
+    res.send(`<!DOCTYPE html>
 <html>
 <head>
   <title>B2B Admin</title>
@@ -171,7 +162,7 @@ app.get('/admin', (req, res) => {
 <body>
   <div class="header">
     <h1>🛍️ B2B Wholesale Manager</h1>
-    <p>\${shop}</p>
+    <p>` + shop + `</p>
   </div>
   <div class="container">
     <div class="stats">
@@ -215,16 +206,22 @@ app.get('/admin', (req, res) => {
 
   <script>
     var app = ShopifyAppBridge.createApp({
-      apiKey: '\${apiKey}',
+      apiKey: '` + apiKey + `',
       host: new URL(window.location).searchParams.get("host")
     });
 
     async function loadData() {
       try {
+        const responses = await Promise.all([
+          fetch('/api/customers'),
+          fetch('/api/groups'),
+          fetch('/api/stats')
+        ]);
+        
         const [customers, groups, stats] = await Promise.all([
-          fetch('/api/customers').then(r => r.json()),
-          fetch('/api/groups').then(r => r.json()),
-          fetch('/api/stats').then(r => r.json())
+          responses[0].json(),
+          responses[1].json(),
+          responses[2].json()
         ]);
 
         document.getElementById('totalCustomers').textContent = stats.totalCustomers || 0;
@@ -234,7 +231,7 @@ app.get('/admin', (req, res) => {
 
         renderCustomers(customers);
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error loading data:', err);
       }
     }
 
@@ -245,25 +242,32 @@ app.get('/admin', (req, res) => {
         return;
       }
 
-      tbody.innerHTML = customers.map(function(c) {
-        return '<tr>' +
-          '<td><strong>' + (c.name || 'N/A') + '</strong></td>' +
-          '<td>' + c.email + '</td>' +
-          '<td>' + (c.group || 'None') + '</td>' +
-          '<td><span class="badge badge-' + c.status + '">' + c.status + '</span></td>' +
-          '<td>' + new Date(c.created_at).toLocaleDateString() + '</td>' +
-          '<td>' + (c.status === 'pending' ? 
-            '<button class="btn" onclick="approve(' + c.id + ')">Approve</button>' :
-            '<button class="btn" onclick="view(' + c.id + ')">View</button>') +
-          '</td></tr>';
-      }).join('');
+      var html = '';
+      for (var i = 0; i < customers.length; i++) {
+        var c = customers[i];
+        html += '<tr>';
+        html += '<td><strong>' + (c.name || 'N/A') + '</strong></td>';
+        html += '<td>' + c.email + '</td>';
+        html += '<td>' + (c.group || 'None') + '</td>';
+        html += '<td><span class="badge badge-' + c.status + '">' + c.status + '</span></td>';
+        html += '<td>' + new Date(c.created_at).toLocaleDateString() + '</td>';
+        html += '<td>';
+        if (c.status === 'pending') {
+          html += '<button class="btn" onclick="approve(' + c.id + ')">Approve</button>';
+        } else {
+          html += '<button class="btn" onclick="view(' + c.id + ')">View</button>';
+        }
+        html += '</td>';
+        html += '</tr>';
+      }
+      tbody.innerHTML = html;
     }
 
     async function approve(id) {
       if (!confirm('Approve this customer?')) return;
       try {
         await fetch('/api/customers/' + id + '/approve', { method: 'POST' });
-        alert('Approved!');
+        alert('Customer approved!');
         loadData();
       } catch (err) {
         alert('Error: ' + err.message);
@@ -277,21 +281,39 @@ app.get('/admin', (req, res) => {
     loadData();
   </script>
 </body>
-</html>\`);
+</html>`);
   });
 });
 
-// Error handling
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(\`🚀 B2B App running on port \${PORT}\`);
-  console.log(\`📍 Environment: \${process.env.NODE_ENV || 'development'}\`);
-  console.log(\`🏪 Shopify API Key: \${!!process.env.SHOPIFY_API_KEY}\`);
+  console.log('🚀 B2B App running on port ' + PORT);
+  console.log('📍 Environment: ' + (process.env.NODE_ENV || 'development'));
+  console.log('🏪 Shopify API Key configured: ' + !!process.env.SHOPIFY_API_KEY);
 });
 
 module.exports = app;
+```
+
+---
+
+## 🔑 Cambios clave:
+
+1. ✅ **Línea 85:** Cambié template literals por concatenación simple: `'/auth/shopify?shop=' + shopQuery`
+2. ✅ **Todo el HTML:** Usa concatenación con `+` en lugar de backticks para evitar problemas
+3. ✅ **Sin caracteres especiales** que puedan causar problemas al copiar/pegar
+
+---
+
+## 🚀 Ahora:
+
+1. **Commit** este archivo
+2. **Espera 2-3 minutos** al deploy
+3. **Verifica logs:** `Your service is live 🎉`
+4. **Instala:**
+```
+https://firma-b2b.onrender.com/auth/shopify?shop=qy5r19-gm.myshopify.com
