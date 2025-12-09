@@ -4,11 +4,8 @@ const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-// ===========================================
-// *** CORRECCIÓN DE RUTA (SOLUCIÓN AL ERROR DE DEPLOY) ***
-// Si database/ está en el mismo directorio que index.js, la ruta es './database/db'
+// *** CORRECCIÓN DE RUTA: './database/db' si db.js está dentro de server/database/ ***
 const { initDatabase } = require('./database/db'); 
-// ===========================================
 
 const router = express.Router();
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
@@ -28,10 +25,10 @@ const PORT = process.env.PORT || 3000;
 // Initialize database
 initDatabase();
 
-// === CORRECCIÓN CRUCIAL PARA RENDER/HTTPS ===
-// Le dice a Express que confíe en el proxy inverso de Render
+// === CORRECCIÓN CRUCIAL 1: Confiar en el proxy para HTTPS (Render) ===
+// Necesario para que las cookies (sesiones) funcionen correctamente
 app.set('trust proxy', 1); 
-// ===========================================
+// ====================================================================
 
 // Middleware
 app.use(cors({
@@ -42,12 +39,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-  // Es crucial usar una clave secreta fuerte y única.
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-for-production-security',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    // secure: true es OBLIGATORIO en Render (HTTPS) para que 'state' funcione
+    // CORRECCIÓN CRUCIAL 2: secure: true para HTTPS (Render)
     secure: process.env.NODE_ENV === 'production', 
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
