@@ -2,7 +2,7 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-// const fs = require('fs'); // <--- Eliminamos la importación de fs
+// No longer needs 'fs' here
 
 let db;
 
@@ -13,11 +13,13 @@ const finalDbPath = path.join(dataDir, 'b2b.db');
 
 
 function initDatabase() {
-    // CRÍTICO: Eliminamos la lógica de fs.existsSync / fs.mkdirSync de aquí.
+    // La creación del directorio 'data' ahora se maneja en server/index.js
 
     db = new sqlite3.Database(finalDbPath, (err) => {
         if (err) {
             console.error('Error connecting to database:', err.message);
+            // Si el error persiste, probablemente es un problema de Render
+            console.error(`Attempted DB path: ${finalDbPath}`);
             return;
         }
         console.log('✅ Database connected to', finalDbPath);
@@ -58,7 +60,7 @@ function initDatabase() {
                 );
             `);
 
-            // CRÍTICO: Nueva tabla para las sesiones de EXPRESS (usada por connect-sqlite3)
+            // CRÍTICO: Nueva tabla para las sesiones de EXPRESS (aunque ahora se usará :memory: en index.js, la mantenemos aquí por si se cambia la estrategia)
             db.run(`
                 CREATE TABLE IF NOT EXISTS sessions_store (
                     sid TEXT PRIMARY KEY,
