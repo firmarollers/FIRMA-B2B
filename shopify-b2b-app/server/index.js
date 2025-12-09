@@ -1,3 +1,5 @@
+// server/index.js
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -25,7 +27,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Definición de la ruta a la carpeta 'data' (dos niveles arriba de 'server')
-// Esto resuelve a: /project/src/shopify-b2b-app/data
 const dataDir = path.join(__dirname, '..', '..', 'data'); 
 
 // Initialize database
@@ -362,15 +363,4 @@ app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ 
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  });
-});
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 B2B Wholesale App running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🏪 Shopify API Key configured: ${!!process.env.SHOPIFY_API_KEY}`);
-});
-
-module.exports = app;
+    message: process.env
