@@ -25,6 +25,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Definición de la ruta a la carpeta 'data' (dos niveles arriba de 'server')
+// Esto resuelve a: /project/src/shopify-b2b-app/data
 const dataDir = path.join(__dirname, '..', '..', 'data'); 
 
 // Initialize database
@@ -43,9 +44,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// === BLOQUE CRÍTICO CORREGIDO: Sesiones persistentes en SQLite y SameSite ===
+// === BLOQUE CRÍTICO: Sesiones persistentes en SQLite y SameSite ===
 app.use(session({
-  // Configuración del Store para usar la ruta absoluta y la tabla corregida
+  // Configuración del Store
   store: new SQLiteStore({ 
       // CRÍTICO: Usamos la ruta completa a 'b2b.db'
       db: path.join(dataDir, 'b2b.db'), 
@@ -258,7 +259,7 @@ app.get('/admin', (req, res) => {
                     <th>Email</th>
                     <th>Group</th>
                     <th>Status</th>
-                    <th>Registered</th>
+                  <th>Registered</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -314,7 +315,7 @@ app.get('/admin', (req, res) => {
               <tr>
                 <td><strong>\${customer.name || 'N/A'}</strong></td>
                 <td>\${customer.email}</td>
-                <td>\${customer.group || 'None'}</td>
+                <td>\${customer.group_name || 'None'}</td>
                 <td><span class="badge badge-\${customer.status}">\${customer.status}</span></td>
                 <td>\${new Date(customer.created_at).toLocaleDateString()}</td>
                 <td>
