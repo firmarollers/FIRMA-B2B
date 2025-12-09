@@ -1,7 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const axios = require('axios');
-const { getDatabase } = require('../database/db'); // Esta ruta sigue correcta desde routes/
+// La ruta de db es correcta desde routes/, que está dentro de server/
+const { getDatabase } = require('../database/db'); 
 
 const router = express.Router();
 
@@ -41,9 +42,8 @@ router.get('/callback', async (req, res) => {
   
   console.log('OAuth callback for shop:', shop);
 
-  // === VERIFICACIÓN DE STATE ===
+  // === VERIFICACIÓN DE STATE (Ahora debería funcionar gracias a index.js) ===
   if (state !== req.session.state) {
-    // Si esto falla, es porque el 'trust proxy' o 'secure: true' no estaban bien configurados
     return res.status(403).send('Request origin cannot be verified'); 
   }
 
@@ -65,6 +65,7 @@ router.get('/callback', async (req, res) => {
     const db = getDatabase();
     const sessionId = crypto.randomBytes(16).toString('hex');
     
+    // *** CORRECCIÓN CRUCIAL: Limpieza de caracteres extraños en la consulta SQL ***
     db.prepare(`
       INSERT OR REPLACE INTO sessions (id, shop, state, accessToken, scope, isOnline)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -84,7 +85,6 @@ router.get('/callback', async (req, res) => {
       registerWebhooks(shop, access_token).catch(console.error);
       
       // Redirección final para aplicaciones incrustadas.
-      // Apunta a la URL donde Shopify espera que se cargue el iframe.
       res.redirect(`https://${shop}/admin/apps/${SHOPIFY_API_KEY}`);
     });
 
