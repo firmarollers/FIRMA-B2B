@@ -2,13 +2,15 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs'); // Importar el módulo File System
+const fs = require('fs'); // Módulo File System para crear directorios
 
 let db;
 
-// Definición de la ruta a la carpeta 'data' y el archivo de la DB
-const dataDir = path.join(__dirname, '..', '..', 'data');
+// --- CRÍTICO: CAMBIO DE RUTA a ABSOLUTA (process.cwd()) ---
+// Definición de la ruta a la carpeta 'data' en la raíz del proyecto
+const dataDir = path.join(process.cwd(), 'data'); 
 const finalDbPath = path.join(dataDir, 'b2b.db');
+// -----------------------------------------------------------
 
 
 function initDatabase() {
@@ -20,6 +22,7 @@ function initDatabase() {
 
     db = new sqlite3.Database(finalDbPath, (err) => {
         if (err) {
+            // Este log ahora imprimirá si el error persiste, dando la ruta exacta
             console.error('Error connecting to database:', err.message);
             return;
         }
@@ -85,7 +88,6 @@ function initDatabase() {
 
                     db.get("SELECT COUNT(*) AS count FROM app_settings", (err, row) => {
                         if (row.count === 0) {
-                            // Se podría insertar un registro inicial aquí, pero a menudo se espera la instalación de Shopify.
                             console.log('✅ Default app settings created');
                         }
                     });
