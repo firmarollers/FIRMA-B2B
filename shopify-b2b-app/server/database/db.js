@@ -6,8 +6,7 @@ const fs = require('fs'); // Módulo File System para crear directorios
 
 let db;
 
-// --- CRÍTICO: CAMBIO DE RUTA a ABSOLUTA (process.cwd()) ---
-// Definición de la ruta a la carpeta 'data' en la raíz del proyecto
+// --- CRÍTICO: RUTA ABSOLUTA (process.cwd()) ---
 const dataDir = path.join(process.cwd(), 'data'); 
 const finalDbPath = path.join(dataDir, 'b2b.db');
 // -----------------------------------------------------------
@@ -22,7 +21,6 @@ function initDatabase() {
 
     db = new sqlite3.Database(finalDbPath, (err) => {
         if (err) {
-            // Este log ahora imprimirá si el error persiste, dando la ruta exacta
             console.error('Error connecting to database:', err.message);
             return;
         }
