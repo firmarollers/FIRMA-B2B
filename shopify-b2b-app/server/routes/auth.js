@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const axios = require('axios');
-const { getDatabase } = require('../database/db');
+const { getDatabase } = require('../database/db'); // Esta ruta sigue correcta desde routes/
 
 const router = express.Router();
 
@@ -41,8 +41,10 @@ router.get('/callback', async (req, res) => {
   
   console.log('OAuth callback for shop:', shop);
 
+  // === VERIFICACIÓN DE STATE ===
   if (state !== req.session.state) {
-    return res.status(403).send('Request origin cannot be verified');
+    // Si esto falla, es porque el 'trust proxy' o 'secure: true' no estaban bien configurados
+    return res.status(403).send('Request origin cannot be verified'); 
   }
 
   if (!shop || !code) {
