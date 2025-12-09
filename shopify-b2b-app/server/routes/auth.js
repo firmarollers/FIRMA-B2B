@@ -25,6 +25,9 @@ router.get('/shopify', (req, res) => {
 
   const state = crypto.randomBytes(16).toString('hex');
   const redirectUri = `https://${HOST}/auth/callback`;
+console.log('🔍 DEBUG - Shop:', shop);
+console.log('🔍 DEBUG - Redirect URI:', redirectUri);
+console.log('🔍 DEBUG - Install URL:', installUrl);
   const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&state=${state}&redirect_uri=${redirectUri}`;
 
   // Store state and shop in session
