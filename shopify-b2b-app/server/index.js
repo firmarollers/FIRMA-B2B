@@ -6,6 +6,7 @@ const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const fs = require('fs'); // <--- CRÍTICO: Importar fs
 // Importar el Session Store para SQLite
 const SQLiteStore = require('connect-sqlite3')(session); 
 const { initDatabase } = require('./database/db'); 
@@ -26,10 +27,21 @@ const { verifyAuth } = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- CRÍTICO: CAMBIO DE RUTA a ABSOLUTA (process.cwd()) ---
-// Definición de la ruta a la carpeta 'data' en la raíz del proyecto
+// --- BLOQUE CRÍTICO DE RUTA ABSOLUTA ---
 const dataDir = path.join(process.cwd(), 'data'); 
-// -----------------------------------------------------------
+
+// CRÍTICO: FORZAR LA CREACIÓN DEL DIRECTORIO AQUÍ
+if (!fs.existsSync(dataDir)) {
+    try {
+        fs.mkdirSync(dataDir, { recursive: true });
+        console.log(`✅ Directory ${dataDir} created successfully.`);
+    } catch (e) {
+        console.error(`❌ FATAL ERROR: Could not create data directory at ${dataDir}`, e);
+        // Si no podemos crear el directorio, debemos salir
+        process.exit(1); 
+    }
+}
+// ----------------------------------------
 
 
 // Initialize database
@@ -52,7 +64,7 @@ app.use(cookieParser());
 app.use(session({
   // Configuración del Store
   store: new SQLiteStore({ 
-      // CRÍTICO: Usamos la ruta absoluta a 'b2b.db'
+      // Usamos la ruta absoluta a 'b2b.db'
       db: path.join(dataDir, 'b2b.db'), 
       table: 'sessions_store' // Nombre de la tabla de sesiones de Express
   }), 
@@ -357,8 +369,9 @@ app.get('/admin', (req, res) => {
       </body>
     </html>
   `);
-  }); // <--- **LLAVE DE CIERRE FALTANTE CORREGIDA**
-}); // Cierre del app.get('/admin', ...
+  }); 
+}); 
+
 
 // Error handling
 app.use((err, req, res, next) => {
