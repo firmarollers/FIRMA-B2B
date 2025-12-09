@@ -2,22 +2,18 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs'); // Módulo File System para crear directorios
+// const fs = require('fs'); // <--- Eliminamos la importación de fs
 
 let db;
 
-// --- CRÍTICO: RUTA ABSOLUTA (process.cwd()) ---
+// --- RUTA ABSOLUTA (process.cwd()) ---
 const dataDir = path.join(process.cwd(), 'data'); 
 const finalDbPath = path.join(dataDir, 'b2b.db');
 // -----------------------------------------------------------
 
 
 function initDatabase() {
-    // CRÍTICO: Aseguramos que el directorio 'data' exista antes de abrir la DB
-    if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-        console.log(`✅ Directory ${dataDir} created.`);
-    }
+    // CRÍTICO: Eliminamos la lógica de fs.existsSync / fs.mkdirSync de aquí.
 
     db = new sqlite3.Database(finalDbPath, (err) => {
         if (err) {
