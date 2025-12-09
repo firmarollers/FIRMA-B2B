@@ -261,3 +261,119 @@ app.get('/admin', (req, res) => {
                   <tr>
                     <th>Customer</th>
                     <th>Email</th>
+                    <th>Group</th>
+                    <th>Status</th>
+                  <th>Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">Loading customers...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <script>
+            // Inicializar Shopify App Bridge
+            const app = window.app = ShopifyAppBridge.createApp({
+                apiKey: '${SHOPIFY_API_KEY_LOCAL}',
+                host: new URL(window.location).searchParams.get("host"), // Obtiene el host de Shopify Admin
+            });
+            
+          const API_BASE = '/api';
+          
+          async function loadDashboardData() {
+            // Asegurarse de que el dashboard solo se cargue si la tienda está en la sesión
+            if (!'${shop}') return; 
+            try {
+              // Aquí las llamadas al API deberían funcionar gracias a verifyAuth
+              const [customers, groups, stats] = await Promise.all([
+                fetch(API_BASE + '/customers').then(r => r.json()),
+                fetch(API_BASE + '/groups').then(r => r.json()),
+                fetch(API_BASE + '/stats').then(r => r.json())
+              ]);
+
+              document.getElementById('totalCustomers').textContent = stats.totalCustomers || 0;
+              document.getElementById('pendingApprovals').textContent = stats.pendingApprovals || 0;
+              document.getElementById('activeGroups').textContent = stats.activeGroups || 0;
+              document.getElementById('totalOrders').textContent = stats.totalOrders || 0;
+
+              renderCustomers(customers);
+            } catch (error) {
+              console.error('Error loading dashboard:', error);
+            }
+          }
+
+          function renderCustomers(customers) {
+            const tbody = document.querySelector('#customersTable tbody');
+            if (!customers || customers.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #999;">No B2B customers yet</td></tr>';
+              return;
+            }
+
+            tbody.innerHTML = customers.map(customer => \`
+              <tr>
+                <td><strong>\${customer.name || 'N/A'}</strong></td>
+                <td>\${customer.email}</td>
+                <td>\${customer.group_name || 'None'}</td>
+                <td><span class="badge badge-\${customer.status}">\${customer.status}</span></td>
+                <td>\${new Date(customer.created_at).toLocaleDateString()}</td>
+                <td>
+                  \${customer.status === 'pending' ? 
+                    \`<button class="nav-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="approveCustomer('\${customer.id}')">Approve</button>\` : 
+                    \`<button class="nav-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="viewCustomer('\${customer.id}')">View</button>\`
+                  }
+                </td>
+              </tr>
+            \`).join('');
+          }
+
+          async function approveCustomer(id) {
+            if (!confirm('Approve this B2B customer?')) return;
+            try {
+              await fetch(\`\${API_BASE}/customers/\${id}/approve\`, { method: 'POST' });
+              alert('Customer approved successfully!');
+              loadDashboardData();
+            } catch (error) {
+              alert('Error approving customer: ' + error.message);
+            }
+          }
+
+          function viewCustomer(id) {
+            alert('View customer details (feature coming soon)');
+          }
+
+          function showSection(section) {
+            alert(\`Showing \${section} section (full UI coming soon)\`);
+          }
+
+          // Load data on page load
+          loadDashboardData();
+        </script>
+      </body>
+    </html>
+  `);
+  }); // <--- **LLAVE DE CIERRE FALTANTE CORREGIDA**
+}); // Cierre del app.get('/admin', ...
+
+// Error handling
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 B2B Wholesale App running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🏪 Shopify API Key configured: ${!!process.env.SHOPIFY_API_KEY}`);
+});
+
+module.exports = app;
