@@ -6,6 +6,9 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const { initDatabase } = require('./database/db');
 
+const router = express.Router();
+const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
@@ -59,7 +62,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root endpoint: Handles installation start
+// Root endpoint: Handles installation start or shows login form
 app.get('/', (req, res) => {
   const shopQuery = req.query.shop;
 
@@ -139,9 +142,9 @@ app.get('/', (req, res) => {
   }
 });
 
-// Admin dashboard (simplified - in production you'd serve React app here)
+// Admin dashboard: App Incrustada
 app.get('/admin', (req, res) => {
-  // Toma 'shop' de la sesión o del query (en caso de que Shopify redirija a /admin?shop=...)
+  // Toma 'shop' de la sesión o del query
   const shop = req.session.shop || req.query.shop;
   
   if (!shop) {
@@ -162,8 +165,10 @@ app.get('/admin', (req, res) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="https://unpkg.com/@shopify/polaris@11.0.0/build/esm/styles.css" rel="stylesheet">
+        <script src="https://unpkg.com/@shopify/app-bridge@3.7.8/umd/app-bridge.js"></script>
         <style>
           body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+          .admin-wrapper { min-height: 100vh; background: #f4f6f8; }
           .header { background: #00848e; color: white; padding: 1rem 2rem; }
           .container { padding: 2rem; }
           .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -184,61 +189,69 @@ app.get('/admin', (req, res) => {
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1>🛍️ B2B Wholesale Manager - ${shop}</h1>
-        </div>
-        <div class="container">
-          <div class="stats">
-            <div class="stat-card">
-              <div class="stat-number" id="totalCustomers">0</div>
-              <div class="stat-label">Total B2B Customers</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="pendingApprovals">0</div>
-              <div class="stat-label">Pending Approvals</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="activeGroups">0</div>
-              <div class="stat-label">Customer Groups</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="totalOrders">0</div>
-              <div class="stat-label">B2B Orders</div>
-            </div>
+        <div class="admin-wrapper">
+          <div class="header">
+            <h1>🛍️ B2B Wholesale Manager - ${shop}</h1>
           </div>
+          <div class="container">
+            <div class="stats">
+              <div class="stat-card">
+                <div class="stat-number" id="totalCustomers">0</div>
+                <div class="stat-label">Total B2B Customers</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="pendingApprovals">0</div>
+                <div class="stat-label">Pending Approvals</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="activeGroups">0</div>
+                <div class="stat-label">Customer Groups</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="totalOrders">0</div>
+                <div class="stat-label">B2B Orders</div>
+              </div>
+            </div>
 
-          <div class="nav">
-            <button class="nav-button" onclick="showSection('customers')">B2B Customers</button>
-            <button class="nav-button" onclick="showSection('groups')">Customer Groups</button>
-            <button class="nav-button" onclick="showSection('pricing')">Pricing Rules</button>
-            <button class="nav-button" onclick="showSection('orders')">Orders</button>
-            <button class="nav-button" onclick="showSection('quotes')">Quote Requests</button>
-            <button class="nav-button" onclick="showSection('settings')">Settings</button>
-          </div>
+            <div class="nav">
+              <button class="nav-button" onclick="showSection('customers')">B2B Customers</button>
+              <button class="nav-button" onclick="showSection('groups')">Customer Groups</button>
+              <button class="nav-button" onclick="showSection('pricing')">Pricing Rules</button>
+              <button class="nav-button" onclick="showSection('orders')">Orders</button>
+              <button class="nav-button" onclick="showSection('quotes')">Quote Requests</button>
+              <button class="nav-button" onclick="showSection('settings')">Settings</button>
+            </div>
 
-          <div class="card" id="customersSection">
-            <h2>B2B Customers</h2>
-            <table class="table" id="customersTable">
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Email</th>
-                  <th>Group</th>
-                  <th>Status</th>
-                  <th>Registered</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">Loading customers...</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="card" id="customersSection">
+              <h2>B2B Customers</h2>
+              <table class="table" id="customersTable">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Email</th>
+                    <th>Group</th>
+                    <th>Status</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">Loading customers...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </div>
 
         <script>
+            // Inicializar Shopify App Bridge
+            const app = window.app = ShopifyAppBridge.createApp({
+                apiKey: '${SHOPIFY_API_KEY}',
+                host: new URL(window.location).searchParams.get("host"), // Obtiene el host de Shopify Admin
+            });
+            
           const API_BASE = '/api';
           
           async function loadDashboardData() {
