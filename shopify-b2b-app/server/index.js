@@ -4,6 +4,9 @@ const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+// === NUEVA LÍNEA: Importar el Session Store para SQLite ===
+const SQLiteStore = require('connect-sqlite3')(session); 
+// =======================================================
 const { initDatabase } = require('./database/db'); 
 
 const router = express.Router();
@@ -17,7 +20,6 @@ const pricingRoutes = require('./routes/pricing');
 const orderRoutes = require('./routes/orders');
 const quoteRoutes = require('./routes/quotes');
 const storefrontRoutes = require('./routes/storefront');
-// Importa verifyAuth desde auth.js
 const { verifyAuth } = require('./routes/auth'); 
 
 const app = express();
@@ -38,31 +40,32 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// === BLOQUE CRÍTICO CORREGIDO: Sesiones persistentes en SQLite ===
 app.use(session({
+  store: new SQLiteStore({ db: 'sessions.sqlite', dir: path.join(__dirname, 'database') }), // Usa la base de datos para persistencia
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-for-production-security',
   resave: false,
   saveUninitialized: false,
+  name: 'sid', // Nombre de la cookie de sesión
   cookie: {
-    // 1. OBLIGATORIO: Cookies seguras en Render
     secure: process.env.NODE_ENV === 'production', 
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    // 2. CORRECCIÓN DEFINITIVA: Permite el envío en el IFRAME de Shopify
-    sameSite: 'none'
+    maxAge: 24 * 60 * 60 * 1000, 
+    sameSite: 'none' // Necesario para la incrustación en Shopify
   }
 }));
+// =================================================================
 
 // Serve static files (for storefront integration)
 app.use('/storefront', express.static(path.join(__dirname, '../storefront')));
 
-// === MIDDLEWARE PREVENTIVO ===
-// Aplica verifyAuth a TODAS las rutas de API
+// Aplica verifyAuth a TODAS las rutas de API y el ADMIN
 app.use('/api', verifyAuth, apiRoutes);
 app.use('/api/customers', verifyAuth, customerRoutes);
 app.use('/api/pricing', verifyAuth, pricingRoutes);
 app.use('/api/orders', verifyAuth, orderRoutes);
 app.use('/api/quotes', verifyAuth, quoteRoutes);
-// =============================
 
 // Routes
 app.use('/auth', authRoutes);
@@ -161,7 +164,7 @@ app.get('/admin', (req, res) => {
     
     // Toma 'shop' de la sesión o del query
     const shop = req.session.shop || req.query.shop;
-    const SHOPIFY_API_KEY_LOCAL = process.env.SHOPIFY_API_KEY; // Usar una variable local
+    const SHOPIFY_API_KEY_LOCAL = process.env.SHOPIFY_API_KEY; 
     
     // Esto es redundante si verifyAuth funciona, pero lo mantenemos para seguridad
     if (!shop) {
