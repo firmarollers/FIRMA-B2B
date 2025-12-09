@@ -4,9 +4,8 @@ const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-// === NUEVA LÍNEA: Importar el Session Store para SQLite ===
+// Importar el Session Store para SQLite
 const SQLiteStore = require('connect-sqlite3')(session); 
-// =======================================================
 const { initDatabase } = require('./database/db'); 
 
 const router = express.Router();
@@ -41,18 +40,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// === BLOQUE CRÍTICO CORREGIDO: Sesiones persistentes en SQLite ===
+// === BLOQUE CRÍTICO CORREGIDO: Sesiones persistentes en SQLite y SameSite ===
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: path.join(__dirname, 'database') }), // Usa la base de datos para persistencia
+  // Configuración del Store para usar la nueva tabla sessions_store
+  store: new SQLiteStore({ 
+      db: 'app.sqlite', // Nombre del archivo de base de datos
+      dir: path.join(__dirname, 'database'), // Directorio de la DB
+      table: 'sessions_store' // Nombre de la tabla de sesiones de Express
+  }), 
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-for-production-security',
   resave: false,
   saveUninitialized: false,
   name: 'sid', // Nombre de la cookie de sesión
   cookie: {
-    secure: process.env.NODE_ENV === 'production', 
+    secure: process.env.NODE_ENV === 'production', // true en Render (HTTPS)
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, 
-    sameSite: 'none' // Necesario para la incrustación en Shopify
+    sameSite: 'none' // CRÍTICO: Permite el envío de la cookie en el IFRAME
   }
 }));
 // =================================================================
