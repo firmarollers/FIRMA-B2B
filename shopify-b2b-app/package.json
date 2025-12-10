@@ -1,34 +1,13 @@
 {
-  "name": "shopify-b2b-wholesale-app",
+  "name": "shopify-b2b-app",
   "version": "1.0.0",
-  "description": "B2B Wholesale Management App for Shopify",
-  "main": "server/index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js",
-    "build": "npm install"
+    "start": "node server.js"
   },
-  "keywords": ["shopify", "b2b", "wholesale"],
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
-    "@shopify/shopify-api": "^10.0.0",
-    "@shopify/shopify-api/adapters/node": "^10.0.0",
-    "axios": "^1.6.2",
-    "body-parser": "^1.20.2",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "ejs": "^3.1.9",
     "express": "^4.18.2",
-    "express-session": "^1.17.3",
-    "helmet": "^7.0.0",
-    "sqlite3": "^5.1.6"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "dotenv": "^16.0.3",
+    "ejs": "^3.1.9"
   }
 }
