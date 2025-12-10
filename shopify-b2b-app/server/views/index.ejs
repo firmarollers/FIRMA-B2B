@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2B Wholesale Manager</title>
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+    <script src="https://unpkg.com/@shopify/app-bridge-utils"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .stat-card { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .stat-number { font-size: 2.5rem; font-weight: bold; color: #0d6efd; }
+        .customer-row { transition: all 0.3s; }
+        .customer-row:hover { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>B2B Wholesale Manager</h1>
+            <div>
+                <span class="badge bg-secondary"><%= shop %></span>
+                <a href="/b2b-signup?shop=<%= shop %>&host=<%= host %>" target="_blank" class="btn btn-outline-primary ms-2">
+                    Registration Form
+                </a>
+                <button id="refreshBtn" class="btn btn-primary ms-2">Refresh</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <h5>Total B2B Customers</h5>
+                    <div id="totalB2B" class="stat-number">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <h5>Pending Approvals</h5>
+                    <div id="pendingApprovals" class="stat-number">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <h5>Customer Groups</h5>
+                    <div id="customerGroups" class="stat-number">1</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <h5>B2B Orders</h5>
+                    <div id="b2bOrders" class="stat-number">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- B2B Customers Table -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">B2B Customers</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Group</th>
+                                <th>Status</th>
+                                <th>Registered</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTable">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading customers...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración inicial
+        const shop = '<%= shop %>';
+        const host = '<%= host %>';
+        const apiKey = '<%= apiKey %>';
+
+        // Cargar clientes al iniciar
+        document.addEventListener('DOMContentLoaded', loadCustomers);
+        document.getElementById('refreshBtn').addEventListener('click', loadCustomers);
+
+        async function loadCustomers() {
+            try {
+                showLoading();
+                const response = await fetch(`/api/customers?shop=${shop}&host=${host}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateDashboard(data.data);
+                    renderCustomerTable(data.data.b2b);
+                } else {
+                    showError('Error loading customers: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to load customers. Check console for details.');
+            }
+        }
+
+        function updateDashboard(data) {
+            document.getElementById('totalB2B').textContent = data.stats.totalB2B;
+            document.getElementById('pendingApprovals').textContent = data.stats.pendingApprovals;
+            document.getElementById('customerGroups').textContent = data.stats.customerGroups;
+            document.getElementById('b2bOrders').textContent = data.stats.b2bOrders;
+        }
+
+        function renderCustomerTable(customers) {
+            const tbody = document.getElementById('customersTable');
+            
+            if (!customers || customers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No B2B customers found</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            customers.forEach(customer => {
+                const isPending = customer.note && customer.note.includes('B2B_PENDING');
+                const isApproved = customer.tags && customer.tags.includes('b2b_approved');
+                
+                html += `
+                    <tr class="customer-row">
+                        <td>${customer.first_name || ''} ${customer.last_name || ''}</td>
+                        <td>${customer.email || ''}</td>
+                        <td>
+                            <span class="badge ${isApproved ? 'bg-success' : 'bg-warning'}">
+                                ${isApproved ? 'Approved' : 'Pending'}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${isPending ? 'bg-secondary' : 'bg-success'}">
+                                ${isPending ? 'Pending Review' : 'Approved'}
+                            </span>
+                        </td>
+                        <td>${new Date(customer.created_at).toLocaleDateString()}</td>
+                        <td>
+                            ${isPending ? 
+                                `<button class="btn btn-sm btn-success" onclick="approveCustomer('${customer.id}')">Approve</button>
+                                 <button class="btn btn-sm btn-danger ms-1" onclick="rejectCustomer('${customer.id}')">Reject</button>` : 
+                                `<span class="badge bg-success">Approved</span>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        async function approveCustomer(customerId) {
+            if (!confirm('Are you sure you want to approve this B2B customer?')) return;
+            
+            try {
+                const response = await fetch('/api/customers/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId, shop })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Customer approved successfully!');
+                    loadCustomers();
+                } else {
+                    showError('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to approve customer');
+            }
+        }
+
+        function rejectCustomer(customerId) {
+            // Implementar rechazo si lo necesitas
+            alert('Reject functionality to be implemented');
+        }
+
+        function showLoading() {
+            const tbody = document.getElementById('customersTable');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+        }
+
+        function showError(message) {
+            const tbody = document.getElementById('customersTable');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${message}</td></tr>`;
+            console.error(message);
+        }
+
+        // Hacer funciones globales
+        window.approveCustomer = approveCustomer;
+        window.rejectCustomer = rejectCustomer;
+        window.loadCustomers = loadCustomers;
+    </script>
+</body>
+</html>
