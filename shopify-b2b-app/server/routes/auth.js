@@ -1,10 +1,8 @@
-// server/routes/auth.js
-
 const express = require('express');
 const crypto = require('crypto');
-const axios = require('axios'); 
-// No se necesita getDatabase() temporalmente
-// const { getDatabase } = require('../database/db'); 
+const axios = require('axios');
+// Importar queries en lugar de getDatabase
+const { queries } = require('../database/db'); 
 
 const router = express.Router();
 
@@ -99,27 +97,30 @@ router.get('/callback', async function(req, res) {
 
     var accessToken = response.data.access_token;
     var scope = response.data.scope;
+    // Capturar la expiración (si Shopify la envía)
+    var expires_in = response.data.expires_in; 
     
     console.log('Access token received');
 
-    // --- GESTIÓN DE LA BASE DE DATOS (COMENTADA PARA DIAGNÓSTICO DEL 502) ---
-    var sessionId = crypto.randomBytes(16).toString('hex');
-    /*
+    // 2. Guardar en la Base de Datos (RESTAURADO y SEGURO)
     try {
-      const { getDatabase } = require('../database/db'); 
-      var db = getDatabase();
-      // Esta línea es la principal sospechosa del crash síncrono.
-      db.prepare('INSERT OR REPLACE INTO sessions (id, shop, state, accessToken, scope, isOnline) VALUES (?, ?, ?, ?, ?, ?)').run(sessionId, shop, state, accessToken, scope, 0);
+      // Calcular expiración (si está disponible)
+      const expires = expires_in 
+                      ? new Date(Date.now() + expires_in * 1000).toISOString() 
+                      : null;
+      
+      queries.saveShopSession(shop, accessToken, scope, expires); 
+      console.log('✅ Shop session saved to SQLite');
     } catch (dbError) {
-      console.warn('WARNING: Failed to save shop/session to SQLite. Continuing with Express Session.', dbError);
+      console.error('FATAL WARNING: Failed to save shop/session to SQLite.', dbError);
+      // El servidor continúa usando la sesión de Express
     }
-    */
-    // -------------------------------------------------------------------------
 
-    // 3. Actualizar la Sesión de Express (CRÍTICO para la autenticación)
+    // 3. Actualizar la Sesión de Express (CRÍTICO)
     req.session.shop = shop;
     req.session.accessToken = accessToken;
-    req.session.sessionId = sessionId;
+    // El sessionId ya no se necesita aquí si usamos el store de Express
+    
 
     req.session.save(function(err) {
       if (err) {
@@ -128,11 +129,11 @@ router.get('/callback', async function(req, res) {
       }
 
       console.log('Session saved, registering webhooks...');
-      // Se mantiene el registro de webhooks ya que no bloquea la redirección.
+      // El registro de webhooks es asíncrono y no bloquea
       registerWebhooks(shop, accessToken).catch(console.error);
       
       console.log('Redirecting to admin dashboard with host parameter');
-      // CRÍTICO: Incluir el parámetro 'host' para App Bridge
+      // CORRECCIÓN FINAL: Incluir el parámetro 'host' para App Bridge
       res.redirect('/admin?shop=' + shop + '&host=' + host);
     });
 
