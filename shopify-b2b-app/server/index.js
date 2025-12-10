@@ -4,7 +4,7 @@ const express = require('express');
 const helmet = require('helmet');
 const path = require('path');
 const { router: authRoutes } = require('./routes/auth');
-const customerRoutes = require('./routes/customers');
+const customerRoutes = require('./routes/customers').router || require('./routes/customers');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
