@@ -3,155 +3,553 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B2B Wholesale Manager</title>
-    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-    <script src="https://unpkg.com/@shopify/app-bridge-utils"></script>
+    <title>B2B Wholesale Manager - <%= shop %></title>
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js?v=3"></script>
+    <script src="https://unpkg.com/@shopify/app-bridge-utils@3.0.0"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
-        .stat-card { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-        .stat-number { font-size: 2.5rem; font-weight: bold; color: #0d6efd; }
-        .customer-row { transition: all 0.3s; }
-        .customer-row:hover { background-color: #f8f9fa; }
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body {
+            background-color: #f5f7fb;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            padding-bottom: 50px;
+        }
+        
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--primary-color), #0a58ca);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            line-height: 1;
+            margin: 10px 0;
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+        
+        .customer-row {
+            transition: all 0.2s;
+        }
+        
+        .customer-row:hover {
+            background-color: rgba(13, 110, 253, 0.05) !important;
+            transform: translateX(3px);
+        }
+        
+        .badge-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            font-weight: 500;
+        }
+        
+        .badge-approved {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            font-weight: 500;
+        }
+        
+        .badge-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+            font-weight: 500;
+        }
+        
+        .btn-approve {
+            background: linear-gradient(135deg, var(--success-color), #146c43);
+            border: none;
+            border-radius: 6px;
+            padding: 6px 15px;
+            font-size: 0.875rem;
+        }
+        
+        .btn-reject {
+            background: linear-gradient(135deg, var(--danger-color), #b02a37);
+            border: none;
+            border-radius: 6px;
+            padding: 6px 15px;
+            font-size: 0.875rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--secondary-color);
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            color: #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .store-display {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 2px solid rgba(255,255,255,0.3);
+            font-weight: 500;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            vertical-align: -0.125em;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border 0.75s linear infinite;
+        }
+        
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>B2B Wholesale Manager</h1>
-            <div>
-                <span class="badge bg-secondary"><%= shop %></span>
-                <a href="/b2b-signup?shop=<%= shop %>&host=<%= host %>" target="_blank" class="btn btn-outline-primary ms-2">
-                    Registration Form
-                </a>
-                <button id="refreshBtn" class="btn btn-primary ms-2">Refresh</button>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="bi bi-building me-2" style="font-size: 1.8rem;"></i>
+                <div>
+                    <h4 class="mb-0">B2B Wholesale Manager</h4>
+                    <small class="opacity-75">Professional Business Account Management</small>
+                </div>
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <div class="store-display me-3">
+                    <i class="bi bi-shop me-2"></i>
+                    <%= shop %>
+                </div>
+                
+                <div class="btn-group" role="group">
+                    <a href="/b2b-signup?shop=<%= shop %>&host=<%= host %>" target="_blank" class="btn btn-outline-light">
+                        <i class="bi bi-person-plus me-1"></i> Registration Form
+                    </a>
+                    <button id="refreshBtn" class="btn btn-light ms-2">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
             </div>
         </div>
+    </nav>
 
+    <!-- Main Container -->
+    <div class="container-fluid">
         <!-- Dashboard Stats -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stat-card text-center">
-                    <h5>Total B2B Customers</h5>
-                    <div id="totalB2B" class="stat-number">0</div>
+        <div class="row mb-4 px-3">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <h6 class="text-uppercase text-muted mb-1">Total B2B Customers</h6>
+                            <div id="totalB2B" class="stat-number">0</div>
+                            <small class="text-muted">All business accounts</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary">Active</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card text-center">
-                    <h5>Pending Approvals</h5>
-                    <div id="pendingApprovals" class="stat-number">0</div>
+            
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-icon">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <h6 class="text-uppercase text-muted mb-1">Pending Approvals</h6>
+                            <div id="pendingApprovals" class="stat-number">0</div>
+                            <small class="text-muted">Awaiting review</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-warning">Action Required</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card text-center">
-                    <h5>Customer Groups</h5>
-                    <div id="customerGroups" class="stat-number">1</div>
+            
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-icon">
+                                <i class="bi bi-tags-fill"></i>
+                            </div>
+                            <h6 class="text-uppercase text-muted mb-1">Customer Groups</h6>
+                            <div id="customerGroups" class="stat-number">3</div>
+                            <small class="text-muted">Pricing tiers</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-info">Configured</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card text-center">
-                    <h5>B2B Orders</h5>
-                    <div id="b2bOrders" class="stat-number">0</div>
+            
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-icon">
+                                <i class="bi bi-cart-check-fill"></i>
+                            </div>
+                            <h6 class="text-uppercase text-muted mb-1">B2B Orders</h6>
+                            <div id="b2bOrders" class="stat-number">0</div>
+                            <small class="text-muted">This month</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success">Tracking</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- B2B Customers Table -->
-        <div class="card">
-            <div class="card-header bg-dark text-white">
-                <h5 class="mb-0">B2B Customers</h5>
+        <!-- Main Content -->
+        <div class="row px-3">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h4 class="mb-0">
+                                    <i class="bi bi-people me-2"></i> B2B Customers
+                                </h4>
+                                <p class="text-muted mb-0">Manage your wholesale business accounts</p>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="filterAll">
+                                    All
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-sm" id="filterPending">
+                                    Pending
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" id="filterApproved">
+                                    Approved
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Customer</th>
+                                        <th>Email</th>
+                                        <th>Company</th>
+                                        <th>Group</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customersTable">
+                                    <!-- Loading state -->
+                                    <tr id="loadingRow">
+                                        <td colspan="7" class="text-center py-5">
+                                            <div class="loading-spinner text-primary mb-3"></div>
+                                            <p class="text-muted mb-0">Loading customers data...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Empty state (hidden by default) -->
+                        <div id="emptyState" class="empty-state d-none">
+                            <div class="empty-state-icon">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <h4 class="mb-3">No B2B Customers Found</h4>
+                            <p class="text-muted mb-4">
+                                You don't have any business customers yet.<br>
+                                Share the registration form to start receiving applications.
+                            </p>
+                            <a href="/b2b-signup?shop=<%= shop %>&host=<%= host %>" target="_blank" class="btn btn-primary btn-lg">
+                                <i class="bi bi-link-45deg me-2"></i> Get Registration Link
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <span id="customerCount">0</span> customers • 
+                                <span id="pendingCount">0</span> pending • 
+                                <span id="approvedCount">0</span> approved
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="exportCustomers()">
+                                    <i class="bi bi-download me-1"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Email</th>
-                                <th>Group</th>
-                                <th>Status</th>
-                                <th>Registered</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customersTable">
-                            <tr>
-                                <td colspan="6" class="text-center">Loading customers...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="row mt-4 px-3">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">
+                            <i class="bi bi-lightning-charge-fill text-warning me-2"></i> Quick Actions
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="d-grid">
+                                    <a href="/b2b-signup?shop=<%= shop %>&host=<%= host %>" target="_blank" class="btn btn-outline-primary">
+                                        <i class="bi bi-link-45deg me-2"></i> Get Registration Link
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-grid">
+                                    <button class="btn btn-outline-success" onclick="createSampleCustomer()">
+                                        <i class="bi bi-person-plus me-2"></i> Add Test Customer
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-grid">
+                                    <button class="btn btn-outline-info" onclick="viewDocumentation()">
+                                        <i class="bi bi-book me-2"></i> View Documentation
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-grid">
+                                    <button class="btn btn-outline-secondary" onclick="openSettings()">
+                                        <i class="bi bi-gear me-2"></i> App Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Success Toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <span id="toastMessage">Operation completed successfully!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Configuración inicial
+        // Configuration
         const shop = '<%= shop %>';
         const host = '<%= host %>';
         const apiKey = '<%= apiKey %>';
+        let currentFilter = 'all';
+        let allCustomers = [];
+        let b2bCustomers = [];
 
-        // Cargar clientes al iniciar
-        document.addEventListener('DOMContentLoaded', loadCustomers);
-        document.getElementById('refreshBtn').addEventListener('click', loadCustomers);
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('B2B App initialized for shop:', shop);
+            loadCustomers();
+            
+            // Setup event listeners
+            document.getElementById('refreshBtn').addEventListener('click', loadCustomers);
+            document.getElementById('filterAll').addEventListener('click', () => setFilter('all'));
+            document.getElementById('filterPending').addEventListener('click', () => setFilter('pending'));
+            document.getElementById('filterApproved').addEventListener('click', () => setFilter('approved'));
+            
+            // Initialize Shopify App Bridge
+            if (typeof window !== 'undefined' && window.shopify) {
+                const app = window.shopify.app({
+                    apiKey: apiKey,
+                    shopOrigin: `https://${shop}`
+                });
+                console.log('App Bridge initialized');
+            }
+        });
 
         async function loadCustomers() {
             try {
-                showLoading();
+                showLoading(true);
+                console.log('Loading customers for shop:', shop);
+                
                 const response = await fetch(`/api/customers?shop=${shop}&host=${host}`);
                 const data = await response.json();
                 
                 if (data.success) {
+                    console.log('Customers loaded:', data.data.b2b.length);
+                    allCustomers = data.data.all || [];
+                    b2bCustomers = data.data.b2b || [];
+                    
                     updateDashboard(data.data);
-                    renderCustomerTable(data.data.b2b);
+                    renderCustomerTable(b2bCustomers);
+                    updateFilterButtons();
+                    
+                    if (b2bCustomers.length === 0) {
+                        showEmptyState();
+                    } else {
+                        hideEmptyState();
+                    }
                 } else {
-                    showError('Error loading customers: ' + data.message);
+                    showError('Failed to load customers: ' + data.message);
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showError('Failed to load customers. Check console for details.');
+                console.error('Error loading customers:', error);
+                showError('Network error. Please check your connection.');
+            } finally {
+                showLoading(false);
             }
         }
 
         function updateDashboard(data) {
-            document.getElementById('totalB2B').textContent = data.stats.totalB2B;
-            document.getElementById('pendingApprovals').textContent = data.stats.pendingApprovals;
-            document.getElementById('customerGroups').textContent = data.stats.customerGroups;
-            document.getElementById('b2bOrders').textContent = data.stats.b2bOrders;
+            document.getElementById('totalB2B').textContent = data.stats?.totalB2B || 0;
+            document.getElementById('pendingApprovals').textContent = data.stats?.pendingApprovals || 0;
+            document.getElementById('customerGroups').textContent = data.stats?.customerGroups || 3;
+            document.getElementById('b2bOrders').textContent = data.stats?.b2bOrders || 0;
+            
+            // Update footer counts
+            const approvedCount = b2bCustomers.filter(c => 
+                c.tags && c.tags.includes('b2b_approved')
+            ).length;
+            
+            document.getElementById('customerCount').textContent = b2bCustomers.length;
+            document.getElementById('pendingCount').textContent = data.stats?.pendingApprovals || 0;
+            document.getElementById('approvedCount').textContent = approvedCount;
         }
 
         function renderCustomerTable(customers) {
             const tbody = document.getElementById('customersTable');
             
             if (!customers || customers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No B2B customers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No customers match the current filter</td></tr>';
                 return;
             }
             
             let html = '';
+            
             customers.forEach(customer => {
                 const isPending = customer.note && customer.note.includes('B2B_PENDING');
                 const isApproved = customer.tags && customer.tags.includes('b2b_approved');
+                const statusClass = isPending ? 'badge-pending' : (isApproved ? 'badge-approved' : 'badge-pending');
+                const statusText = isPending ? 'Pending Review' : (isApproved ? 'Approved' : 'Pending');
+                
+                // Get company from metafields or note
+                let company = 'Not specified';
+                if (customer.metafields && customer.metafields.length > 0) {
+                    const companyField = customer.metafields.find(m => m.key === 'company');
+                    if (companyField) company = companyField.value;
+                }
+                
+                // Get registration date
+                const regDate = new Date(customer.created_at);
+                const dateFormatted = regDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                // Customer group based on tags
+                let customerGroup = 'Standard';
+                if (customer.tags) {
+                    if (customer.tags.includes('wholesale')) customerGroup = 'Wholesale';
+                    if (customer.tags.includes('distributor')) customerGroup = 'Distributor';
+                    if (customer.tags.includes('enterprise')) customerGroup = 'Enterprise';
+                }
                 
                 html += `
-                    <tr class="customer-row">
-                        <td>${customer.first_name || ''} ${customer.last_name || ''}</td>
-                        <td>${customer.email || ''}</td>
-                        <td>
-                            <span class="badge ${isApproved ? 'bg-success' : 'bg-warning'}">
-                                ${isApproved ? 'Approved' : 'Pending'}
-                            </span>
+                    <tr class="customer-row" data-status="${isPending ? 'pending' : 'approved'}">
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar me-3" style="width: 40px; height: 40px; background-color: #e9ecef; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="text-muted" style="font-size: 1.2rem;">
+                                        ${(customer.first_name?.[0] || '') + (customer.last_name?.[0] || '') || '?'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong>${customer.first_name || ''} ${customer.last_name || ''}</strong>
+                                    <div class="text-muted small">ID: ${customer.id?.substring(customer.id.lastIndexOf('/') + 1) || 'N/A'}</div>
+                                </div>
+                            </div>
                         </td>
                         <td>
-                            <span class="badge ${isPending ? 'bg-secondary' : 'bg-success'}">
-                                ${isPending ? 'Pending Review' : 'Approved'}
-                            </span>
+                            <a href="mailto:${customer.email}" class="text-decoration-none">
+                                ${customer.email || 'N/A'}
+                            </a>
                         </td>
-                        <td>${new Date(customer.created_at).toLocaleDateString()}</td>
                         <td>
+                            <span class="badge bg-light text-dark">${company}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">${customerGroup}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>
+                            <small>${dateFormatted}</small>
+                        </td>
+                        <td class="text-end pe-4">
                             ${isPending ? 
-                                `<button class="btn btn-sm btn-success" onclick="approveCustomer('${customer.id}')">Approve</button>
-                                 <button class="btn btn-sm btn-danger ms-1" onclick="rejectCustomer('${customer.id}')">Reject</button>` : 
-                                `<span class="badge bg-success">Approved</span>`
+                                `<button class="btn btn-approve btn-sm me-1" onclick="approveCustomer('${customer.id}', '${customer.email}')">
+                                    <i class="bi bi-check-lg me-1"></i> Approve
+                                </button>
+                                <button class="btn btn-reject btn-sm" onclick="rejectCustomer('${customer.id}', '${customer.email}')">
+                                    <i class="bi bi-x-lg me-1"></i> Reject
+                                </button>` : 
+                                `<span class="text-success small">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Approved
+                                </span>`
                             }
                         </td>
                     </tr>
@@ -159,52 +557,195 @@
             });
             
             tbody.innerHTML = html;
+            applyCurrentFilter();
         }
 
-        async function approveCustomer(customerId) {
-            if (!confirm('Are you sure you want to approve this B2B customer?')) return;
+        async function approveCustomer(customerId, customerEmail) {
+            if (!confirm(`Approve B2B account for ${customerEmail}?\n\nThis will:\n• Grant wholesale pricing\n• Send approval email\n• Create customer discount`)) {
+                return;
+            }
             
             try {
                 const response = await fetch('/api/customers/approve', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ customerId, shop })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        customerId: customerId,
+                        shop: shop
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('Customer approved successfully!');
-                    loadCustomers();
+                    showToast(`✅ Approved: ${customerEmail}`);
+                    setTimeout(() => loadCustomers(), 1000);
                 } else {
-                    showError('Error: ' + data.message);
+                    showError('Approval failed: ' + data.message);
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showError('Failed to approve customer');
+                console.error('Error approving customer:', error);
+                showError('Network error during approval.');
             }
         }
 
-        function rejectCustomer(customerId) {
-            // Implementar rechazo si lo necesitas
-            alert('Reject functionality to be implemented');
+        function rejectCustomer(customerId, customerEmail) {
+            if (!confirm(`Reject B2B application for ${customerEmail}?\n\nThis will notify the applicant and archive their request.`)) {
+                return;
+            }
+            
+            // Implementation for rejection would go here
+            showToast(`⚠️ Rejection feature to be implemented`);
         }
 
-        function showLoading() {
-            const tbody = document.getElementById('customersTable');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+        function setFilter(filter) {
+            currentFilter = filter;
+            updateFilterButtons();
+            applyCurrentFilter();
+        }
+
+        function updateFilterButtons() {
+            // Reset all buttons
+            document.getElementById('filterAll').classList.remove('active', 'btn-primary');
+            document.getElementById('filterAll').classList.add('btn-outline-primary');
+            
+            document.getElementById('filterPending').classList.remove('active', 'btn-warning');
+            document.getElementById('filterPending').classList.add('btn-outline-warning');
+            
+            document.getElementById('filterApproved').classList.remove('active', 'btn-success');
+            document.getElementById('filterApproved').classList.add('btn-outline-success');
+            
+            // Activate current filter
+            if (currentFilter === 'all') {
+                document.getElementById('filterAll').classList.add('active', 'btn-primary');
+                document.getElementById('filterAll').classList.remove('btn-outline-primary');
+            } else if (currentFilter === 'pending') {
+                document.getElementById('filterPending').classList.add('active', 'btn-warning');
+                document.getElementById('filterPending').classList.remove('btn-outline-warning');
+            } else if (currentFilter === 'approved') {
+                document.getElementById('filterApproved').classList.add('active', 'btn-success');
+                document.getElementById('filterApproved').classList.remove('btn-outline-success');
+            }
+        }
+
+        function applyCurrentFilter() {
+            const rows = document.querySelectorAll('#customersTable tr.customer-row');
+            
+            rows.forEach(row => {
+                const status = row.getAttribute('data-status');
+                const showRow = 
+                    currentFilter === 'all' || 
+                    (currentFilter === 'pending' && status === 'pending') ||
+                    (currentFilter === 'approved' && status === 'approved');
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+            
+            // Show message if no rows visible
+            const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+            if (visibleRows.length === 0 && rows.length > 0) {
+                const tbody = document.getElementById('customersTable');
+                tbody.innerHTML += `
+                    <tr id="noFilterResults">
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            No ${currentFilter} customers found
+                        </td>
+                    </tr>
+                `;
+            } else {
+                const noResultsRow = document.getElementById('noFilterResults');
+                if (noResultsRow) noResultsRow.remove();
+            }
+        }
+
+        function showLoading(show) {
+            const loadingRow = document.getElementById('loadingRow');
+            if (loadingRow) {
+                loadingRow.style.display = show ? '' : 'none';
+            }
+            
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.disabled = show;
+                refreshBtn.innerHTML = show ? 
+                    '<span class="spinner-border spinner-border-sm me-1"></span> Loading...' : 
+                    '<i class="bi bi-arrow-clockwise"></i> Refresh';
+            }
+        }
+
+        function showEmptyState() {
+            document.getElementById('emptyState').classList.remove('d-none');
+            document.getElementById('customersTable').classList.add('d-none');
+        }
+
+        function hideEmptyState() {
+            document.getElementById('emptyState').classList.add('d-none');
+            document.getElementById('customersTable').classList.remove('d-none');
         }
 
         function showError(message) {
+            console.error('App Error:', message);
             const tbody = document.getElementById('customersTable');
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${message}</td></tr>`;
-            console.error(message);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill display-4 d-block mb-3"></i>
+                        <h5>Error Loading Data</h5>
+                        <p class="text-muted">${message}</p>
+                        <button onclick="loadCustomers()" class="btn btn-outline-danger mt-2">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Try Again
+                        </button>
+                    </td>
+                </tr>
+            `;
         }
 
-        // Hacer funciones globales
+        function showToast(message) {
+            const toastEl = document.getElementById('successToast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            const toast = new bootstrap.Toast(toastEl, {
+                autohide: true,
+                delay: 3000
+            });
+            
+            toast.show();
+        }
+
+        // Additional utility functions
+        function exportCustomers() {
+            showToast('📊 Export feature to be implemented');
+        }
+
+        function createSampleCustomer() {
+            showToast('👤 Test customer feature to be implemented');
+        }
+
+        function viewDocumentation() {
+            window.open('https://help.shopify.com/manual/wholesale', '_blank');
+        }
+
+        function openSettings() {
+            showToast('⚙️ Settings feature to be implemented');
+        }
+
+        // Make functions available globally
+        window.loadCustomers = loadCustomers;
         window.approveCustomer = approveCustomer;
         window.rejectCustomer = rejectCustomer;
-        window.loadCustomers = loadCustomers;
+        window.setFilter = setFilter;
+        window.exportCustomers = exportCustomers;
+        window.createSampleCustomer = createSampleCustomer;
+        window.viewDocumentation = viewDocumentation;
+        window.openSettings = openSettings;
     </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
