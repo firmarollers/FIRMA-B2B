@@ -1,18 +1,22 @@
-// server/routes/auth.js - VERSIÓN CORREGIDA (RUTAS FIJAS)
+// server/routes/auth.js - VERSIÓN CON ADAPTER CORRECTO
 const express = require('express');
 const router = express.Router();
-const Shopify = require('@shopify/shopify-api').shopifyApi;
+
+// IMPORTAR CON ADAPTER PARA NODE.JS
+const { shopifyApi, LATEST_API_VERSION } = require('@shopify/shopify-api');
+require('@shopify/shopify-api/adapters/node');
+
 const sessionStorage = require('../db/sessionStorage');
 
-// Configurar Shopify API
-const shopify = Shopify({
+// Configurar Shopify API CON ADAPTER
+const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
   scopes: process.env.SCOPES.split(','),
   hostName: process.env.HOST.replace(/https?:\/\//, ''),
   hostScheme: 'https',
   isEmbeddedApp: true,
-  apiVersion: '2025-10',
+  apiVersion: LATEST_API_VERSION, // Usar versión automática
   sessionStorage: {
     storeSession: sessionStorage.storeSession,
     loadSession: sessionStorage.loadSession,
@@ -20,37 +24,11 @@ const shopify = Shopify({
   },
 });
 
-// Middleware para verificar sesión
-const verifySession = async (req, res, next) => {
-  try {
-    const session = await shopify.session.customAppSession(
-      req.query.shop || req.body.shop,
-      process.env.SHOPIFY_API_KEY
-    );
-    
-    const storedSession = await sessionStorage.findSessionByShop(session.shop);
-    
-    if (storedSession && storedSession.access_token) {
-      req.session = {
-        ...session,
-        accessToken: storedSession.access_token,
-      };
-      next();
-    } else {
-      console.log(`Authentication required - shop: ${session.shop} token: false`);
-      res.redirect(`/auth?shop=${session.shop}`);
-    }
-  } catch (error) {
-    console.error('Session verification error:', error);
-    res.status(500).send('Error verifying session');
-  }
-};
-
-// RUTA CORREGIDA: '/' en lugar de '/auth'
+// Ruta principal de autenticación
 router.get('/', async (req, res) => {
   const shop = req.query.shop;
   if (!shop) {
-    return res.status(400).send('Missing shop parameter. Use: /auth?shop=your-store.myshopify.com');
+    return res.status(400).send('Missing shop parameter');
   }
 
   console.log(`[AUTH] Starting OAuth for: ${shop}`);
@@ -58,54 +36,53 @@ router.get('/', async (req, res) => {
   try {
     const authRoute = await shopify.auth.begin({
       shop,
-      callbackPath: '/auth/callback',  // IMPORTANTE: Este es el path COMPLETO
+      callbackPath: '/auth/callback',
       isOnline: false,
       rawRequest: req,
       rawResponse: res,
     });
 
-    console.log(`[AUTH] Redirecting to: ${authRoute}`);
+    console.log(`[AUTH] Redirecting to Shopify...`);
     res.redirect(authRoute);
   } catch (error) {
-    console.error('[AUTH] Error:', error);
+    console.error('[AUTH] Error:', error.message);
     res.status(500).send(`Authentication error: ${error.message}`);
   }
 });
 
-// RUTA CORREGIDA: '/callback' en lugar de '/auth/callback'
+// Callback de OAuth
 router.get('/callback', async (req, res) => {
   try {
     const shop = req.query.shop;
-    console.log(`[CALLBACK] OAuth callback for shop: ${shop}`);
+    console.log(`[CALLBACK] Processing for shop: ${shop}`);
 
-    const session = await shopify.auth.callback({
+    const callback = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
     });
 
     console.log('[CALLBACK] Access token received');
     
-    // Redirigir al admin de Shopify
+    // Redirigir al admin
     const redirectUrl = shopify.auth.buildEmbeddedAppUrl({
       rawRequest: req,
       rawResponse: res,
     });
 
-    console.log(`[CALLBACK] Redirecting to: ${redirectUrl}`);
+    console.log(`[CALLBACK] Redirecting to admin...`);
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error('[CALLBACK] Error:', error);
+    console.error('[CALLBACK] Error:', error.message);
     res.status(500).send(`Authentication failed: ${error.message}`);
   }
 });
 
-// Ruta de prueba para verificar que el router funciona
+// Ruta de prueba
 router.get('/test', (req, res) => {
   res.json({ 
-    message: 'Auth router is working',
-    routes: ['GET /', 'GET /callback', 'GET /test'],
+    message: 'Auth router working',
     timestamp: new Date().toISOString()
   });
 });
 
-module.exports = { router, verifySession };
+module.exports = { router };
