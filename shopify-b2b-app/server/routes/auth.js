@@ -1,4 +1,4 @@
-// server/routes/auth.js
+// server/routes/auth.js - VERSIÓN CORREGIDA (RUTAS FIJAS)
 const express = require('express');
 const router = express.Router();
 const Shopify = require('@shopify/shopify-api').shopifyApi;
@@ -46,83 +46,66 @@ const verifySession = async (req, res, next) => {
   }
 };
 
-// Ruta principal de autenticación
-router.get('/auth', async (req, res) => {
+// RUTA CORREGIDA: '/' en lugar de '/auth'
+router.get('/', async (req, res) => {
   const shop = req.query.shop;
   if (!shop) {
-    return res.status(400).send('Missing shop parameter');
+    return res.status(400).send('Missing shop parameter. Use: /auth?shop=your-store.myshopify.com');
   }
 
-  console.log(`Redirecting to Shopify OAuth for: ${shop}`);
+  console.log(`[AUTH] Starting OAuth for: ${shop}`);
   
-  const authRoute = await shopify.auth.begin({
-    shop,
-    callbackPath: '/auth/callback',
-    isOnline: false,
-    rawRequest: req,
-    rawResponse: res,
-  });
+  try {
+    const authRoute = await shopify.auth.begin({
+      shop,
+      callbackPath: '/auth/callback',  // IMPORTANTE: Este es el path COMPLETO
+      isOnline: false,
+      rawRequest: req,
+      rawResponse: res,
+    });
 
-  res.redirect(authRoute);
+    console.log(`[AUTH] Redirecting to: ${authRoute}`);
+    res.redirect(authRoute);
+  } catch (error) {
+    console.error('[AUTH] Error:', error);
+    res.status(500).send(`Authentication error: ${error.message}`);
+  }
 });
 
-// Callback de OAuth
-router.get('/auth/callback', async (req, res) => {
+// RUTA CORREGIDA: '/callback' en lugar de '/auth/callback'
+router.get('/callback', async (req, res) => {
   try {
     const shop = req.query.shop;
-    console.log(`OAuth callback for shop: ${shop}`);
+    console.log(`[CALLBACK] OAuth callback for shop: ${shop}`);
 
     const session = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
     });
 
-    console.log('Access token received');
+    console.log('[CALLBACK] Access token received');
     
-    // Redirigir al admin de Shopify con los parámetros correctos
-    const host = req.query.host;
+    // Redirigir al admin de Shopify
     const redirectUrl = shopify.auth.buildEmbeddedAppUrl({
       rawRequest: req,
       rawResponse: res,
     });
 
-    console.log(`Redirecting to admin: ${redirectUrl}`);
+    console.log(`[CALLBACK] Redirecting to: ${redirectUrl}`);
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error('OAuth callback error:', error);
-    res.status(500).send('Authentication failed');
+    console.error('[CALLBACK] Error:', error);
+    res.status(500).send(`Authentication failed: ${error.message}`);
   }
 });
 
-// Ruta principal de la app (requiere sesión)
-router.get('/', verifySession, async (req, res) => {
-  try {
-    const session = req.session;
-    
-    // Crear cliente de Shopify con el token de acceso
-    const client = new shopify.clients.Rest({
-      session: {
-        shop: session.shop,
-        accessToken: session.accessToken,
-      },
-    });
-
-    // Obtener clientes de Shopify
-    const customers = await client.get({
-      path: 'customers',
-    });
-
-    // Renderizar la vista principal
-    res.render('index', {
-      apiKey: process.env.SHOPIFY_API_KEY,
-      shop: session.shop,
-      host: req.query.host,
-      customers: customers.body.customers || [],
-    });
-  } catch (error) {
-    console.error('Dashboard error:', error);
-    res.status(500).send('Error loading dashboard');
-  }
+// Ruta de prueba para verificar que el router funciona
+router.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Auth router is working',
+    routes: ['GET /', 'GET /callback', 'GET /test'],
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = { router, verifySession };
